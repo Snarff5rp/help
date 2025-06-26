@@ -3,45 +3,243 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GTA 5 RP | Регистрация</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>ROLEPLAY SERVER | Главная</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Russo+One&display=swap" rel="stylesheet">
+    <style>
+        /* Общие стили */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: #0a0a0a url('https://images.unsplash.com/photo-1605106702734-205df224ecce?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80') no-repeat center/cover;
+            color: #fff;
+            min-height: 100vh;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 10, 0.85);
+            z-index: -1;
+        }
+        
+        /* Шапка */
+        header {
+            background: linear-gradient(90deg, rgba(30, 30, 45, 0.9), rgba(42, 42, 58, 0.9));
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            padding: 15px 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        
+        .header-container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-family: 'Russo One', sans-serif;
+            font-size: 26px;
+            font-weight: 400;
+            color: #FF4754;
+            text-decoration: none;
+            letter-spacing: 1px;
+            transition: 0.3s;
+        }
+        
+        .logo:hover {
+            text-shadow: 0 0 10px rgba(255, 71, 84, 0.7);
+        }
+        
+        .nav-menu {
+            display: flex;
+            gap: 30px;
+        }
+        
+        .nav-menu a {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            transition: 0.3s;
+            position: relative;
+        }
+        
+        .nav-menu a:hover {
+            color: #FF4754;
+        }
+        
+        .nav-menu a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #FF4754;
+            transition: 0.3s;
+        }
+        
+        .nav-menu a:hover::after {
+            width: 100%;
+        }
+        
+        /* Основной контент */
+        .main {
+            padding: 150px 0 50px;
+            text-align: center;
+            animation: fadeIn 1s ease-in-out;
+        }
+        
+        h1 {
+            font-family: 'Russo One', sans-serif;
+            font-size: 48px;
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px rgba(255, 71, 84, 0.5);
+        }
+        
+        .server-stats {
+            background: rgba(30, 30, 45, 0.8);
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 800px;
+            margin: 0 auto 40px;
+            border: 1px solid #333;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            transform: translateY(20px);
+            opacity: 0;
+            animation: slideUp 0.8s ease-out 0.3s forwards;
+        }
+        
+        .server-stats h2 {
+            font-family: 'Russo One', sans-serif;
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #FF4754;
+        }
+        
+        .server-stats p {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+        
+        .server-ip {
+            background: linear-gradient(90deg, #FF4754, #E84118);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 50px;
+            display: inline-block;
+            margin-top: 20px;
+            font-weight: bold;
+            font-size: 18px;
+            border: none;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 5px 15px rgba(255, 71, 84, 0.4);
+        }
+        
+        .server-ip:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 71, 84, 0.6);
+        }
+        
+        /* Анимации */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { 
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to { 
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Футер */
+        footer {
+            background: rgba(20, 20, 30, 0.9);
+            padding: 20px 0;
+            text-align: center;
+            margin-top: 50px;
+        }
+        
+        footer p {
+            font-size: 14px;
+            color: #aaa;
+        }
+    </style>
 </head>
 <body>
+    <!-- Шапка сайта -->
     <header>
-        <div class="logo">MAJESTIC RP</div>
-        <nav>
-            <a href="#">Главная</a>
-            <a href="#">Правила</a>
-            <a href="#">Регистрация</a>
-            <a href="#">Форум</a>
-            <a href="#">Донат</a>
-        </nav>
+        <div class="header-container">
+            <a href="/" class="logo">ROLEPLAY SERVER</a>
+            <nav class="nav-menu">
+                <a href="pamyatka.html">Памятка</a>
+                <a href="forum.html">Форум</a>
+                <a href="youtube.html">Ютуб</a>
+            </nav>
+        </div>
     </header>
-
-    <main>
-        <div class="register-form">
-            <h2>Регистрация на сервер</h2>
-            <form id="regForm">
-                <input type="text" placeholder="Никнейм" required>
-                <input type="password" placeholder="Пароль" required>
-                <input type="email" placeholder="E-mail" required>
-                <input type="number" placeholder="Возраст" min="16" required>
-                <input type="text" placeholder="Discord (например, User#1234)" required>
-                <button type="submit">Отправить заявку</button>
-            </form>
-            <p>Уже есть аккаунт? <a href="#">Войти</a></p>
+    
+    <!-- Основной контент -->
+    <main class="main">
+        <h1>Добро пожаловать на сервер!</h1>
+        <div class="server-stats">
+            <h2>Статистика сервера</h2>
+            <p>Онлайн: <span id="online">256</span>/500</p>
+            <p>Версия: 1.1</p>
+            <button class="server-ip" onclick="copyIP()">connect server.roleplay.com</button>
         </div>
     </main>
-
+    
+    <!-- Футер -->
     <footer>
-        <p>© 2025 Majestic RP | GTA 5 RolePlay</p>
-        <div class="social-links">
-            <a href="#">Discord</a>
-            <a href="#">VK</a>
-            <a href="#">YouTube</a>
+        <div class="header-container">
+            <p>© 2023 ROLEPLAY SERVER. Все права защищены.</p>
         </div>
     </footer>
-
-    <script src="script.js"></script>
+    
+    <script>
+        // Динамическое изменение онлайна (для примера)
+        setInterval(() => {
+            const onlineElement = document.getElementById('online');
+            let online = parseInt(onlineElement.textContent);
+            online += Math.floor(Math.random() * 3) - 1;
+            if (online < 240) online = 240;
+            if (online > 280) online = 280;
+            onlineElement.textContent = online;
+        }, 5000);
+        
+        // Копирование IP
+        function copyIP() {
+            const ip = 'connect server.roleplay.com';
+            navigator.clipboard.writeText(ip).then(() => {
+                alert('IP скопирован в буфер обмена!');
+            });
+        }
+    </script>
 </body>
 </html>
