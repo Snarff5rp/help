@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ROLEPLAY SERVER | Главная</title>
+    <title>MAJESTIC RP | Главная</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Russo+One&display=swap" rel="stylesheet">
     <style>
-        /* Общие стили */
+        /* Основные стили */
         * {
             margin: 0;
             padding: 0;
@@ -15,10 +15,11 @@
         
         body {
             font-family: 'Montserrat', sans-serif;
-            background: #0a0a0a url('https://images.unsplash.com/photo-1605106702734-205df224ecce?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80') no-repeat center/cover;
+            background: #0a0a0a url('https://i.imgur.com/X6QJ5Qe.jpg') no-repeat center/cover fixed;
             color: #fff;
             min-height: 100vh;
             position: relative;
+            overflow-x: hidden;
         }
         
         body::before {
@@ -34,7 +35,7 @@
         
         /* Шапка */
         header {
-            background: linear-gradient(90deg, rgba(30, 30, 45, 0.9), rgba(42, 42, 58, 0.9));
+            background: linear-gradient(90deg, rgba(20, 20, 30, 0.9), rgba(30, 30, 50, 0.9));
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
             padding: 15px 0;
             position: fixed;
@@ -114,41 +115,62 @@
             text-shadow: 0 0 10px rgba(255, 71, 84, 0.5);
         }
         
-        .server-stats {
+        /* Блоки серверов */
+        .servers-list {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .server-card {
             background: rgba(30, 30, 45, 0.8);
             border-radius: 15px;
-            padding: 30px;
-            max-width: 800px;
-            margin: 0 auto 40px;
+            padding: 25px;
+            width: 300px;
             border: 1px solid #333;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(5px);
             transform: translateY(20px);
             opacity: 0;
-            animation: slideUp 0.8s ease-out 0.3s forwards;
+            animation: slideUp 0.8s ease-out forwards;
+            transition: 0.3s;
         }
         
-        .server-stats h2 {
+        .server-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+        }
+        
+        .server-card h2 {
             font-family: 'Russo One', sans-serif;
-            font-size: 28px;
-            margin-bottom: 20px;
+            font-size: 24px;
+            margin-bottom: 15px;
             color: #FF4754;
         }
         
-        .server-stats p {
-            font-size: 18px;
+        .server-card p {
+            font-size: 16px;
+            margin: 8px 0;
+        }
+        
+        .online-counter {
+            font-size: 28px;
+            font-weight: 700;
             margin: 10px 0;
+            color: #4CAF50;
         }
         
         .server-ip {
             background: linear-gradient(90deg, #FF4754, #E84118);
             color: white;
-            padding: 12px 25px;
+            padding: 10px 20px;
             border-radius: 50px;
             display: inline-block;
-            margin-top: 20px;
+            margin-top: 15px;
             font-weight: bold;
-            font-size: 18px;
             border: none;
             cursor: pointer;
             transition: 0.3s;
@@ -189,13 +211,29 @@
             font-size: 14px;
             color: #aaa;
         }
+        
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .nav-menu {
+                gap: 15px;
+            }
+            
+            h1 {
+                font-size: 36px;
+            }
+            
+            .server-card {
+                width: 100%;
+                max-width: 350px;
+            }
+        }
     </style>
 </head>
 <body>
     <!-- Шапка сайта -->
     <header>
         <div class="header-container">
-            <a href="/" class="logo">ROLEPLAY SERVER</a>
+            <a href="/" class="logo">MAJESTIC RP</a>
             <nav class="nav-menu">
                 <a href="pamyatka.html">Памятка</a>
                 <a href="forum.html">Форум</a>
@@ -206,38 +244,71 @@
     
     <!-- Основной контент -->
     <main class="main">
-        <h1>Добро пожаловать на сервер!</h1>
-        <div class="server-stats">
-            <h2>Статистика сервера</h2>
-            <p>Онлайн: <span id="online">256</span>/500</p>
-            <p>Версия: 1.1</p>
-            <button class="server-ip" onclick="copyIP()">connect server.roleplay.com</button>
+        <h1>Добро пожаловать на серверы MAJESTIC RP</h1>
+        
+        <div class="servers-list">
+            <!-- Сервер 1 -->
+            <div class="server-card" style="animation-delay: 0.2s">
+                <h2>MAJESTIC #1 | MAIN</h2>
+                <p>Режим: Hard RP</p>
+                <p>Версия: 1.1</p>
+                <div class="online-counter" id="server1-online">0</div>
+                <button class="server-ip" onclick="copyIP('connect.majestic-rp.com')">Подключиться</button>
+            </div>
+            
+            <!-- Сервер 2 -->
+            <div class="server-card" style="animation-delay: 0.4s">
+                <h2>MAJESTIC #2 | ROLEPLAY</h2>
+                <p>Режим: Medium RP</p>
+                <p>Версия: 1.1</p>
+                <div class="online-counter" id="server2-online">0</div>
+                <button class="server-ip" onclick="copyIP('connect2.majestic-rp.com')">Подключиться</button>
+            </div>
+            
+            <!-- Сервер 3 -->
+            <div class="server-card" style="animation-delay: 0.6s">
+                <h2>MAJESTIC #3 | FREEROAM</h2>
+                <p>Режим: Sandbox</p>
+                <p>Версия: 1.1</p>
+                <div class="online-counter" id="server3-online">0</div>
+                <button class="server-ip" onclick="copyIP('connect3.majestic-rp.com')">Подключиться</button>
+            </div>
         </div>
     </main>
     
     <!-- Футер -->
     <footer>
         <div class="header-container">
-            <p>© 2023 ROLEPLAY SERVER. Все права защищены.</p>
+            <p>© 2023 MAJESTIC RP. Все права защищены.</p>
         </div>
     </footer>
     
     <script>
-        // Динамическое изменение онлайна (для примера)
-        setInterval(() => {
-            const onlineElement = document.getElementById('online');
-            let online = parseInt(onlineElement.textContent);
-            online += Math.floor(Math.random() * 3) - 1;
-            if (online < 240) online = 240;
-            if (online > 280) online = 280;
-            onlineElement.textContent = online;
-        }, 5000);
+        // Динамический онлайн (имитация)
+        function updateOnline() {
+            // Сервер 1
+            let online1 = Math.floor(Math.random() * 200) + 300;
+            document.getElementById('server1-online').textContent = online1;
+            
+            // Сервер 2
+            let online2 = Math.floor(Math.random() * 150) + 200;
+            document.getElementById('server2-online').textContent = online2;
+            
+            // Сервер 3
+            let online3 = Math.floor(Math.random() * 100) + 150;
+            document.getElementById('server3-online').textContent = online3;
+            
+            // Обновляем каждые 5 секунд
+            setTimeout(updateOnline, 5000);
+        }
+        
+        // Запускаем счётчик
+        updateOnline();
         
         // Копирование IP
-        function copyIP() {
-            const ip = 'connect server.roleplay.com';
+        function copyIP(ip) {
             navigator.clipboard.writeText(ip).then(() => {
-                alert('IP скопирован в буфер обмена!');
+                alert('IP сервера скопирован: ' + ip);
             });
         }
     </script>
