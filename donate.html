@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAJESTIC PHOENIX | Поддержка</title>
+    <style>
+        :root {
+            --phoenix-orange: #FF6B35;
+            --phoenix-red: #EF476F;
+            --phoenix-yellow: #FFD166;
+            --phoenix-teal: #06D6A0;
+            --phoenix-blue: #118AB2;
+            --phoenix-dark: #073B4C;
+            --gradient: linear-gradient(135deg, var(--phoenix-red), var(--phoenix-orange));
+            --text-light: #F8F9FA;
+            --text-dark: #212529;
+        }
+
+        body {
+            background: var(--phoenix-dark);
+            color: var(--text-light);
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at center, 
+                          rgba(7, 59, 76, 0.9), 
+                          rgba(4, 34, 44, 0.95));
+        }
+
+        .phoenix-feathers {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.1;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBkPSJNMzg0IDEyOGMwIDM1LjMtMTQuMyA2Ny4zLTM3LjUgOTAuNWwtMTI4IDEyOGMtMjMuMiAyMy4yLTU1LjIgMzcuNS05MC41IDM3LjVIMTZjLTguOCAwLTE2LTcuMi0xNi0xNlY0MTZjMC0zNS4zIDE0LjMtNjcuMyAzNy41LTkwLjVsMTI4LTEyOGMyMy4yLTIzLjIgNTUuMi0zNy41IDkwLjUtMzcuNUgzODR6IiBmaWxsPSIjRkY2QjM1Ii8+PC9zdmc+');
+            background-repeat: repeat;
+            background-size: 100px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .logo {
+            font-family: 'Cinzel', serif;
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            position: relative;
+            animation: phoenixGlow 4s ease-in-out infinite;
+            text-decoration: none;
+            margin-bottom: 40px;
+        }
+
+        @keyframes phoenixGlow {
+            0%, 100% { text-shadow: 0 0 10px var(--phoenix-red); }
+            50% { text-shadow: 0 0 20px var(--phoenix-orange); }
+        }
+
+        .donation-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 50px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 30px;
+        }
+
+        p {
+            font-size: 1.2rem;
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 18px 36px;
+            background: var(--gradient);
+            color: white;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.4s ease;
+            box-shadow: 0 5px 20px rgba(239, 71, 111, 0.3);
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(239, 71, 111, 0.5);
+            background: linear-gradient(135deg, var(--phoenix-orange), var(--phoenix-red));
+        }
+
+        .alerts-container {
+            margin-top: 40px;
+            width: 100%;
+        }
+
+        .alert {
+            background: rgba(255, 209, 102, 0.1);
+            border-left: 4px solid var(--phoenix-yellow);
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 0 8px 8px 0;
+            text-align: left;
+        }
+
+        footer {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 30px 0;
+            text-align: center;
+            margin-top: auto;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+        }
+
+        .copyright {
+            opacity: 0.7;
+            font-size: 1rem;
+        }
+
+        /* Анимация перьев феникса */
+        .feather {
+            position: absolute;
+            background-size: contain;
+            background-repeat: no-repeat;
+            opacity: 0;
+            animation: featherFall linear infinite;
+            z-index: -1;
+        }
+
+        @keyframes featherFall {
+            0% {
+                transform: translateY(-100px) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.8;
+            }
+            100% {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="bg-animation"></div>
+    <div class="phoenix-feathers"></div>
+    <div id="feathers-container"></div>
+    
+    <div class="container">
+        <a href="index.html" class="logo">MAJESTIC PHOENIX</a>
+        
+        <div class="donation-card">
+            <h1>Поддержать проект</h1>
+            <p>Ваша поддержка помогает развивать MAJESTIC PHOENIX и создавать новые возможности для сообщества.</p>
+            
+            <a href="https://donationalerts.com/r/majesticphoenix" class="btn" target="_blank">Поддержать через DonationAlerts</a>
+            
+            <div class="alerts-container">
+                <div class="alert">
+                    <strong>DonationAlerts</strong> - самый удобный способ поддержать проект с помощью банковской карты, электронных кошельков или криптовалюты.
+                </div>
+                <div class="alert">
+                    Каждое пожертвование помогает нам становиться лучше и создавать больше качественного контента.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <div class="copyright">© 2023 MAJESTIC PHOENIX. Все права защищены.</div>
+    </footer>
+    
+    <script>
+        // Создание анимированных перьев
+        function createFeathers() {
+            const container = document.getElementById('feathers-container');
+            const featherCount = 15;
+            const colors = ['#FF6B35', '#EF476F', '#FFD166', '#06D6A0', '#118AB2'];
+            
+            for (let i = 0; i < featherCount; i++) {
+                const feather = document.createElement('div');
+                feather.className = 'feather';
+                
+                // Случайные параметры
+                const size = Math.random() * 30 + 20;
+                const posX = Math.random() * window.innerWidth;
+                const duration = Math.random() * 20 + 10;
+                const delay = Math.random() * 15;
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                const rotation = Math.random() * 360;
+                
+                feather.style.width = `${size}px`;
+                feather.style.height = `${size}px`;
+                feather.style.left = `${posX}px`;
+                feather.style.top = `-${size}px`;
+                feather.style.backgroundImage = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='${color.replace('#', '%23')}'%3E%3Cpath d='M22 12s-7-4-13-4S2 12 2 12s1 4 7 4 13-4 13-4z'/%3E%3C/svg%3E")`;
+                feather.style.animationDuration = `${duration}s`;
+                feather.style.animationDelay = `${delay}s`;
+                feather.style.transform = `rotate(${rotation}deg)`;
+                
+                container.appendChild(feather);
+            }
+        }
+        
+        // Инициализация при загрузке
+        window.addEventListener('load', () => {
+            createFeathers();
+        });
+    </script>
+</body>
+</html>
