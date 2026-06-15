@@ -9,6 +9,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
         :root {
             --bg-dark: #0a0f1f;
@@ -92,6 +93,9 @@
             cursor: pointer;
             font-size: 12px;
         }
+        .new-chat-btn:active {
+            background: #2563eb;
+        }
         .conversation-list {
             flex: 1;
             overflow-y: auto;
@@ -106,9 +110,8 @@
             border: 1px solid transparent;
             position: relative;
         }
-        .conv-item:hover {
-            background: rgba(59,130,246,0.1);
-            border-color: var(--accent);
+        .conv-item:active {
+            background: rgba(59,130,246,0.2);
         }
         .conv-item.active {
             background: rgba(59,130,246,0.2);
@@ -138,10 +141,6 @@
             border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
-            display: none;
-        }
-        .conv-item:hover .delete-conv {
-            display: block;
         }
         .main-chat {
             flex: 1;
@@ -167,6 +166,9 @@
             font-size: 20px;
             cursor: pointer;
             display: none;
+        }
+        .menu-btn:active {
+            background: #2563eb;
         }
         .chat-header h1 {
             font-size: 1.2rem;
@@ -234,6 +236,9 @@
             font-weight: 600;
             cursor: pointer;
         }
+        .input-area button:active {
+            background: #2563eb;
+        }
         .input-area button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -281,41 +286,52 @@
                 max-width: 90%;
                 font-size: 0.8rem;
             }
+            .conv-item {
+                padding: 14px;
+            }
+            .delete-conv {
+                width: 32px;
+                height: 32px;
+                font-size: 16px;
+            }
+            button {
+                min-height: 44px;
+            }
         }
     </style>
 </head>
 <body>
 <div class="overlay" id="overlay"></div>
 <div class="app-layout">
-    <div class="sidebar closed" id="sidebar">
+    <div class="sidebar" id="sidebar">
         <div class="user-info" id="userInfo">
             <div id="unauthBlock">
-                <button class="login-btn" id="loginBtn">Войти через Discord</button>
+                <button class="login-btn" id="loginBtn">🔐 Войти через Discord</button>
             </div>
             <div id="authBlock" style="display:none">
                 <img id="userAvatar" class="user-avatar" src="" alt="">
                 <div id="userName" class="user-name"></div>
-                <button class="login-btn logout-btn" id="logoutBtn">Выйти</button>
+                <button class="login-btn logout-btn" id="logoutBtn">🚪 Выйти</button>
             </div>
         </div>
         <div class="conversations-header">
-            <span>Мои диалоги</span>
-            <button class="new-chat-btn" id="newChatBtn" disabled>Новый</button>
+            <span>📋 Мои диалоги</span>
+            <button class="new-chat-btn" id="newChatBtn" disabled>➕ Новый</button>
         </div>
         <div class="conversation-list" id="conversationList">
             <div style="text-align:center; padding:20px; color:var(--text-dim);">Авторизуйтесь для доступа</div>
         </div>
         <div class="user-stats" id="userStats" style="display:none;">
-            <span id="statsText">Загрузка...</span>
+            📊 <span id="statsText">Загрузка...</span>
         </div>
     </div>
     <div class="main-chat">
         <div class="chat-header">
             <button class="menu-btn" id="menuBtn">☰</button>
-            <h1>Hyuga AI</h1>
+            <h1>🤖 Hyuga AI</h1>
         </div>
         <div class="chat-messages" id="chatMessages">
-            <div class="message bot">Авторизуйтесь через Discord, чтобы начать диалог</div>
+            <div class="message bot">👋 Авторизуйтесь через Discord, чтобы начать диалог</div>
         </div>
         <div class="input-area">
             <input type="text" id="questionInput" placeholder="Напишите ваш вопрос..." disabled>
@@ -507,7 +523,7 @@ async function deleteConversation(convId) {
         if (remaining.length > 0) {
             await selectConversation(remaining[0].id);
         } else {
-            document.getElementById('chatMessages').innerHTML = '<div class="message bot">Создайте новый диалог</div>';
+            document.getElementById('chatMessages').innerHTML = '<div class="message bot">✨ Создайте новый диалог</div>';
             document.getElementById('questionInput').disabled = true;
             document.getElementById('sendBtn').disabled = true;
         }
@@ -567,7 +583,7 @@ function logout() {
     currentConversation = null;
     updateUIForUnauth();
     renderConversationList([]);
-    document.getElementById('chatMessages').innerHTML = '<div class="message bot">Авторизуйтесь через Discord</div>';
+    document.getElementById('chatMessages').innerHTML = '<div class="message bot">👋 Авторизуйтесь через Discord</div>';
 }
 
 function updateUIForAuth() {
@@ -587,14 +603,15 @@ function updateUIForUnauth() {
     document.getElementById('questionInput').disabled = true;
     document.getElementById('sendBtn').disabled = true;
     document.getElementById('userStats').style.display = 'none';
+    document.getElementById('limitWarning').innerHTML = '';
 }
 
 async function updateStats() {
     if (!currentUser) return;
     const daily = await getTodayUserMessagesCount();
-    document.getElementById('statsText').innerHTML = `Сегодня: ${daily}/${DAILY_LIMIT} сообщений`;
+    document.getElementById('statsText').innerHTML = `📨 ${daily}/${DAILY_LIMIT} сегодня`;
     if (daily >= DAILY_LIMIT) {
-        document.getElementById('limitWarning').innerHTML = 'Дневной лимит 100 сообщений исчерпан';
+        document.getElementById('limitWarning').innerHTML = '⚠️ Дневной лимит 100 сообщений исчерпан';
         document.getElementById('questionInput').disabled = true;
         document.getElementById('sendBtn').disabled = true;
     } else {
@@ -614,15 +631,16 @@ async function loadConversationsAndRender() {
 function renderConversationList(convs) {
     const container = document.getElementById('conversationList');
     if (!convs.length) {
-        container.innerHTML = '<div style="text-align:center; padding:20px;">Нет диалогов</div>';
+        container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-dim);">Нет диалогов<br>Нажмите "Новый"</div>';
         return;
     }
     container.innerHTML = convs.map(conv => `
         <div class="conv-item ${currentConversation?.id === conv.id ? 'active' : ''}" data-id="${conv.id}">
-            <div class="conv-title">${conv.title}</div>
-            <button class="delete-conv" data-id="${conv.id}">X</button>
+            <div class="conv-title">📝 ${conv.title}</div>
+            <button class="delete-conv" data-id="${conv.id}">🗑</button>
         </div>
     `).join('');
+    
     document.querySelectorAll('.conv-item').forEach(el => {
         el.addEventListener('click', (e) => {
             if (!e.target.classList.contains('delete-conv')) {
@@ -633,7 +651,7 @@ function renderConversationList(convs) {
     document.querySelectorAll('.delete-conv').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
-            if (confirm('Удалить диалог?')) {
+            if (confirm('Удалить этот диалог?')) {
                 await deleteConversation(parseInt(btn.dataset.id));
             }
         });
@@ -649,7 +667,7 @@ async function selectConversation(id) {
     const messages = await loadMessages(id);
     const container = document.getElementById('chatMessages');
     if (messages.length === 0) {
-        container.innerHTML = '<div class="message bot">Новый диалог. Задайте вопрос.</div>';
+        container.innerHTML = '<div class="message bot">✨ Новый диалог. Задайте вопрос по законам SA.</div>';
     } else {
         container.innerHTML = messages.map(msg => `
             <div class="message ${msg.role === 'user' ? 'user' : 'bot'}">${msg.content.replace(/\n/g, '<br>')}</div>
@@ -662,7 +680,7 @@ async function createNewConversation() {
     if (!currentUser) return;
     const daily = await getTodayUserMessagesCount();
     if (daily >= DAILY_LIMIT) {
-        document.getElementById('limitWarning').innerHTML = 'Лимит 100 сообщений на сегодня';
+        document.getElementById('limitWarning').innerHTML = '⚠️ Лимит 100 сообщений на сегодня';
         return;
     }
     const newConv = await saveConversation({});
@@ -695,25 +713,28 @@ async function sendMessage() {
     if (!currentUser || !currentConversation || waiting) return;
     const daily = await getTodayUserMessagesCount();
     if (daily >= DAILY_LIMIT) {
-        document.getElementById('limitWarning').innerHTML = 'Лимит 100 сообщений на сегодня';
+        document.getElementById('limitWarning').innerHTML = '⚠️ Лимит 100 сообщений на сегодня';
         return;
     }
     const input = document.getElementById('questionInput');
     const question = input.value.trim();
     if (!question) return;
     input.value = '';
+    
     const msgDiv = document.createElement('div');
     msgDiv.className = 'message user';
     msgDiv.textContent = question;
     document.getElementById('chatMessages').appendChild(msgDiv);
     await saveMessage(currentConversation.id, 'user', question);
     await updateConversationTitle(currentConversation.id);
+    
     waiting = true;
     const thinking = document.createElement('div');
     thinking.className = 'message bot';
-    thinking.textContent = 'Думаю...';
+    thinking.textContent = '🤔 Думаю...';
     document.getElementById('chatMessages').appendChild(thinking);
     thinking.scrollIntoView({ behavior: 'smooth' });
+    
     try {
         const all = await loadMessages(currentConversation.id);
         const history = all.filter(m => m.role !== 'system').map(m => ({ role: m.role, content: m.content }));
@@ -727,7 +748,7 @@ async function sendMessage() {
         await loadConversationsAndRender();
         await updateStats();
     } catch(err) {
-        thinking.textContent = `Ошибка: ${err.message}`;
+        thinking.textContent = `❌ Ошибка: ${err.message}`;
     } finally {
         waiting = false;
     }
@@ -736,19 +757,23 @@ async function sendMessage() {
 window.onload = async () => {
     document.getElementById('loginBtn').onclick = loginWithDiscord;
     document.getElementById('logoutBtn').onclick = logout;
-    document.getElementById('newChatBtn').onclick = createNewConversation;
+    document.getElementById('newChatBtn').onclick = () => createNewConversation();
     document.getElementById('sendBtn').onclick = sendMessage;
     document.getElementById('questionInput').onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
-    document.getElementById('menuBtn').onclick = () => {
-        const s = document.getElementById('sidebar');
-        const o = document.getElementById('overlay');
-        s.classList.toggle('closed');
-        o.style.display = s.classList.contains('closed') ? 'none' : 'block';
+    
+    const menuBtn = document.getElementById('menuBtn');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+    
+    menuBtn.onclick = () => {
+        sidebar.classList.toggle('closed');
+        overlay.style.display = sidebar.classList.contains('closed') ? 'none' : 'block';
     };
-    document.getElementById('overlay').onclick = () => {
-        document.getElementById('sidebar').classList.add('closed');
-        document.getElementById('overlay').style.display = 'none';
+    overlay.onclick = () => {
+        sidebar.classList.add('closed');
+        overlay.style.display = 'none';
     };
+    
     await initDB();
     checkDiscordAuth();
 };
