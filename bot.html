@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Hyuga AI • Юридический помощник SA</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        :root {
+            --bg-dark: #0a0f1f;
+            --card-bg: #0f172a;
+            --accent: #3b82f6;
+            --text-light: #e2e8f0;
+            --text-dim: #94a3b8;
+            --border: #1e293b;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        body {
+            background: var(--bg-dark);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            color: var(--text-light);
+        }
+        .app-layout {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .sidebar {
+            width: 320px;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .user-info {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+        }
+        .user-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            margin-bottom: 10px;
+        }
+        .user-name {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .login-btn {
+            background: #5865F2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+        }
+        .logout-btn {
+            background: var(--danger);
+            margin-top: 10px;
+        }
+        .conversations-header {
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+        .new-chat-btn {
+            background: var(--accent);
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .conversation-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+        .conv-item {
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid transparent;
+        }
+        .conv-item:hover {
+            background: rgba(59,130,246,0.1);
+            border-color: var(--accent);
+        }
+        .conv-item.active {
+            background: rgba(59,130,246,0.2);
+            border-color: var(--accent);
+        }
+        .conv-item.archived {
+            opacity: 0.6;
+        }
+        .conv-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        .conv-meta {
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+        .main-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .chat-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            background: var(--card-bg);
+        }
+        .chat-header h1 {
+            font-size: 1.3rem;
+            background: linear-gradient(135deg, #c084fc, #60a5fa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .law-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .badge {
+            background: rgba(255,255,255,0.05);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            color: #facc15;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .message {
+            max-width: 85%;
+            padding: 12px 18px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .user {
+            background: var(--accent);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .bot {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .input-area {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+            background: var(--card-bg);
+        }
+        .input-area input {
+            flex: 1;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 40px;
+            padding: 12px 18px;
+            color: white;
+            font-size: 0.9rem;
+            outline: none;
+        }
+        .input-area input:focus {
+            border-color: var(--accent);
+        }
+        .input-area button {
+            background: var(--accent);
+            border: none;
+            border-radius: 40px;
+            padding: 0 24px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .input-area button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .limit-warning {
+            background: rgba(245,158,11,0.2);
+            padding: 8px 16px;
+            font-size: 12px;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            color: var(--warning);
+        }
+        .user-stats {
+            padding: 12px;
+            font-size: 11px;
+            color: var(--text-dim);
+            border-top: 1px solid var(--border);
+            background: rgba(0,0,0,0.2);
+        }
+        @media (max-width: 768px) {
+            .sidebar { width: 280px; }
+            .message { max-width: 95%; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-layout">
+    <div class="sidebar">
+        <div class="user-info" id="userInfo">
+            <div id="unauthBlock">
+                <button class="login-btn" id="loginBtn">🔐 Войти через Discord</button>
+            </div>
+            <div id="authBlock" style="display:none">
+                <img id="userAvatar" class="user-avatar" src="" alt="">
+                <div id="userName" class="user-name"></div>
+                <button class="login-btn logout-btn" id="logoutBtn">🚪 Выйти</button>
+            </div>
+        </div>
+        <div class="conversations-header">
+            <span>📋 Мои диалоги</span>
+            <button class="new-chat-btn" id="newChatBtn" disabled>➕ Новый</button>
+        </div>
+        <div class="conversation-list" id="conversationList">
+            <div style="text-align:center; padding:20px; color:var(--text-dim);">Авторизуйтесь для доступа</div>
+        </div>
+        <div class="user-stats" id="userStats" style="display:none;">
+            📊 Статистика: <span id="statsText">Загрузка...</span>
+        </div>
+    </div>
+    <div class="main-chat">
+        <div class="chat-header">
+            <h1>🤖 Hyuga AI • Юридический помощник SA</h1>
+            <div class="law-badges">
+                <span class="badge">⚖️ УК SA</span>
+                <span class="badge">🚦 ДК SA</span>
+                <span class="badge">📋 АдмКодекс SA</span>
+                <span class="badge">📜 ПК SA</span>
+                <span class="badge">🏛️ Конституция SA</span>
+            </div>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot">👋 Авторизуйтесь через Discord, чтобы начать диалог</div>
+        </div>
+        <div class="input-area">
+            <input type="text" id="questionInput" placeholder="Напишите ваш вопрос..." disabled>
+            <button id="sendBtn" disabled>Отправить</button>
+        </div>
+        <div class="limit-warning" id="limitWarning"></div>
+    </div>
+</div>
+<script>
+    const DISCORD_CLIENT_ID = '1516071810477592707';
+    const API_KEY = "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";
+    const MODEL = "llama-3.3-70b-versatile";
+    const LAWS_FULL_TEXT = `УК SA Статья 6.2 ч1 Убийство 4 года лишения свободы
+ДК SA Статья 2 Отказ остановиться штраф до 5000$
+АдмКодекс SA Статья 11.1 Оскорбление штраф 5000-20000$
+ПК SA Статья 16 Основания задержания при совершении следы фото видео ордер боло-розыск
+Конституция SA Статья 1.5 Презумпция невиновности`;
+
+    const DB_NAME = 'HyugaAI_DB';
+    const DB_VERSION = 2;
+    let db = null;
+    let currentUser = null;
+    let currentConversation = null;
+    let conversations = [];
+    let waiting = false;
+
+    function initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+                db = request.result;
+                resolve();
+            };
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('users')) {
+                    db.createObjectStore('users', { keyPath: 'id' });
+                }
+                if (!db.objectStoreNames.contains('conversations')) {
+                    const convStore = db.createObjectStore('conversations', { keyPath: 'id', autoIncrement: true });
+                    convStore.createIndex('userId', 'userId');
+                }
+                if (!db.objectStoreNames.contains('messages')) {
+                    const msgStore = db.createObjectStore('messages', { keyPath: 'id', autoIncrement: true });
+                    msgStore.createIndex('conversationId', 'conversationId');
+                }
+            };
+        });
+    }
+
+    async function saveConversation(conv) {
+        const tx = db.transaction('conversations', 'readwrite');
+        const store = tx.objectStore('conversations');
+        if (conv.id) {
+            await store.put(conv);
+        } else {
+            conv.createdAt = Date.now();
+            conv.lastActive = Date.now();
+            conv.isActive = true;
+            conv.userId = currentUser.id;
+            conv.title = conv.title || `Диалог ${new Date().toLocaleString()}`;
+            const id = await store.add(conv);
+            conv.id = id;
+        }
+        return conv;
+    }
+
+    async function loadUserConversations() {
+        if (!currentUser) return [];
+        const tx = db.transaction('conversations', 'readonly');
+        const store = tx.objectStore('conversations');
+        const index = store.index('userId');
+        return new Promise((resolve) => {
+            const result = [];
+            const request = index.openCursor(IDBKeyRange.only(currentUser.id));
+            request.onsuccess = (e) => {
+                const cursor = e.target.result;
+                if (cursor) {
+                    result.push(cursor.value);
+                    cursor.continue();
+                } else {
+                    resolve(result.sort((a,b) => b.lastActive - a.lastActive));
+                }
+            };
+        });
+    }
+
+    async function saveMessage(conversationId, role, content) {
+        const tx = db.transaction(['messages', 'conversations'], 'readwrite');
+        const msgStore = tx.objectStore('messages');
+        await msgStore.add({ conversationId, role, content, createdAt: Date.now() });
+        const convStore = tx.objectStore('conversations');
+        const conv = await new Promise((resolve) => {
+            const req = convStore.get(conversationId);
+            req.onsuccess = () => resolve(req.result);
+        });
+        if (conv) {
+            conv.lastActive = Date.now();
+            await convStore.put(conv);
+        }
+    }
+
+    async function loadMessages(conversationId) {
+        const tx = db.transaction('messages', 'readonly');
+        const index = tx.objectStore('messages').index('conversationId');
+        return new Promise((resolve) => {
+            const result = [];
+            const request = index.openCursor(IDBKeyRange.only(conversationId));
+            request.onsuccess = (e) => {
+                const cursor = e.target.result;
+                if (cursor) {
+                    result.push(cursor.value);
+                    cursor.continue();
+                } else {
+                    resolve(result.sort((a,b) => a.createdAt - b.createdAt));
+                }
+            };
+        });
+    }
+
+    async function getMessageCount(conversationId) {
+        const messages = await loadMessages(conversationId);
+        return messages.length;
+    }
+
+    const REDIRECT_URI = encodeURIComponent(window.location.href.split('#')[0]);
+    const DISCORD_AUTH_URL = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=token&scope=identify`;
+
+    function checkDiscordAuth() {
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        const token = params.get('access_token');
+        if (token) {
+            fetchDiscordUser(token);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+            const savedUser = localStorage.getItem('hyuga_user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                updateUIForAuth();
+                loadConversationsAndRender();
+            } else {
+                updateUIForUnauth();
+            }
+        }
+    }
+
+    async function fetchDiscordUser(token) {
+        try {
+            const res = await fetch('https://discord.com/api/users/@me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const user = await res.json();
+            if (user.id) {
+                currentUser = {
+                    id: user.id,
+                    username: user.username,
+                    avatar: user.avatar ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png'
+                };
+                localStorage.setItem('hyuga_user', JSON.stringify(currentUser));
+                await initDB();
+                const tx = db.transaction('users', 'readwrite');
+                await tx.objectStore('users').put(currentUser);
+                updateUIForAuth();
+                await loadConversationsAndRender();
+            }
+        } catch(e) {
+            console.error('Discord auth error', e);
+            updateUIForUnauth();
+        }
+    }
+
+    function loginWithDiscord() {
+        window.location.href = DISCORD_AUTH_URL;
+    }
+
+    function logout() {
+        currentUser = null;
+        localStorage.removeItem('hyuga_user');
+        currentConversation = null;
+        updateUIForUnauth();
+        renderConversationList([]);
+        document.getElementById('chatMessages').innerHTML = '<div class="message bot">👋 Авторизуйтесь через Discord, чтобы начать диалог</div>';
+    }
+
+    function updateUIForAuth() {
+        document.getElementById('unauthBlock').style.display = 'none';
+        document.getElementById('authBlock').style.display = 'block';
+        document.getElementById('userName').textContent = currentUser.username;
+        document.getElementById('userAvatar').src = currentUser.avatar;
+        document.getElementById('newChatBtn').disabled = false;
+        document.getElementById('questionInput').disabled = false;
+        document.getElementById('sendBtn').disabled = false;
+        document.getElementById('userStats').style.display = 'block';
+        updateStats();
+    }
+
+    function updateUIForUnauth() {
+        document.getElementById('unauthBlock').style.display = 'block';
+        document.getElementById('authBlock').style.display = 'none';
+        document.getElementById('newChatBtn').disabled = true;
+        document.getElementById('questionInput').disabled = true;
+        document.getElementById('sendBtn').disabled = true;
+        document.getElementById('limitWarning').innerHTML = '';
+        document.getElementById('userStats').style.display = 'none';
+    }
+
+    async function updateStats() {
+        if (!currentUser) return;
+        const convs = await loadUserConversations();
+        let totalMessages = 0;
+        let activeCount = 0;
+        for (const conv of convs) {
+            const msgs = await loadMessages(conv.id);
+            totalMessages += msgs.length;
+            if (conv.isActive) activeCount++;
+        }
+        document.getElementById('statsText').innerHTML = `${totalMessages} сообщ. • ${activeCount} актив. диал.`;
+    }
+
+    async function loadConversationsAndRender() {
+        conversations = await loadUserConversations();
+        renderConversationList(conversations);
+        if (conversations.length > 0 && !currentConversation) {
+            await selectConversation(conversations[0].id);
+        } else if (conversations.length === 0) {
+            await createNewConversation();
+        }
+        await updateStats();
+    }
+
+    function renderConversationList(convs) {
+        const container = document.getElementById('conversationList');
+        if (!convs.length) {
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-dim);">Нет диалогов<br>Нажмите "Новый"</div>';
+            return;
+        }
+        container.innerHTML = convs.map(conv => {
+            const isArchived = !conv.isActive;
+            const isActive = currentConversation?.id === conv.id;
+            return `
+                <div class="conv-item ${isArchived ? 'archived' : ''} ${isActive ? 'active' : ''}" data-id="${conv.id}">
+                    <div class="conv-title">📝 ${conv.title} ${isArchived ? '🔒' : '💬'}</div>
+                    <div class="conv-meta">${new Date(conv.createdAt).toLocaleDateString()}</div>
+                    ${isArchived ? '<div class="conv-warning">⏰ Только чтение</div>' : ''}
+                </div>
+            `;
+        }).join('');
+        document.querySelectorAll('.conv-item').forEach(el => {
+            el.addEventListener('click', () => {
+                const id = parseInt(el.dataset.id);
+                selectConversation(id);
+            });
+        });
+    }
+
+    async function selectConversation(id) {
+        const conv = conversations.find(c => c.id === id);
+        if (!conv) return;
+        currentConversation = conv;
+        renderConversationList(conversations);
+        const messages = await loadMessages(id);
+        const container = document.getElementById('chatMessages');
+        if (messages.length === 0) {
+            container.innerHTML = '<div class="message bot">✨ Новый диалог. Задайте вопрос по законам SA.</div>';
+        } else {
+            container.innerHTML = messages.map(msg => `
+                <div class="message ${msg.role === 'user' ? 'user' : 'bot'}">${msg.content.replace(/\n/g, '<br>')}</div>
+            `).join('');
+        }
+        const count = messages.length;
+        const input = document.getElementById('questionInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const warningDiv = document.getElementById('limitWarning');
+        if (!conv.isActive) {
+            input.disabled = true;
+            sendBtn.disabled = true;
+            warningDiv.innerHTML = '🔒 Диалог закрыт (достигнут лимит 25 сообщений). Создайте новый диалог.';
+        } else if (count >= 25) {
+            await closeConversation(id);
+            input.disabled = true;
+            sendBtn.disabled = true;
+            warningDiv.innerHTML = '🔒 Диалог автоматически закрыт (25/25 сообщений).';
+        } else if (count >= 15) {
+            input.disabled = false;
+            sendBtn.disabled = false;
+            warningDiv.innerHTML = `⚠️ Осталось ${25 - count} сообщений в этом диалоге. После 25 будет доступен только просмотр.`;
+        } else {
+            input.disabled = false;
+            sendBtn.disabled = false;
+            warningDiv.innerHTML = `💬 Сообщений: ${count}/25`;
+        }
+        await updateStats();
+    }
+
+    async function closeConversation(id) {
+        const tx = db.transaction('conversations', 'readwrite');
+        const store = tx.objectStore('conversations');
+        const conv = await new Promise((resolve) => {
+            const req = store.get(id);
+            req.onsuccess = () => resolve(req.result);
+        });
+        if (conv) {
+            conv.isActive = false;
+            await store.put(conv);
+            if (currentConversation?.id === id) {
+                currentConversation.isActive = false;
+            }
+        }
+    }
+
+    async function createNewConversation() {
+        if (!currentUser) return;
+        const newConv = {
+            title: `Диалог ${new Date().toLocaleString()}`,
+            createdAt: Date.now(),
+            lastActive: Date.now(),
+            isActive: true,
+            userId: currentUser.id
+        };
+        const saved = await saveConversation(newConv);
+        conversations.unshift(saved);
+        await selectConversation(saved.id);
+        renderConversationList(conversations);
+        await updateStats();
+    }
+
+    function formatBotResponse(text) {
+        let formatted = text;
+        if (!formatted.includes('📌') && !formatted.includes('⚖️')) {
+            formatted = '📌 ' + formatted;
+        }
+        return formatted;
+    }
+
+    async function askAI(userQuestion, conversationHistory) {
+        const messages = [
+            { role: "system", content: `Ты юридический помощник Hyuga AI. Отвечай ТОЛЬКО на основе текста законов штата San Andreas. Если в этом тексте нет точного ответа, скажи: В законах SA не нашёл. Отвечай на русском языке. ТЕКСТ ЗАКОНОВ: ${LAWS_FULL_TEXT}` },
+            ...conversationHistory,
+            { role: "user", content: userQuestion }
+        ];
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${API_KEY}` },
+            body: JSON.stringify({ model: MODEL, messages, temperature: 0.3, max_tokens: 800 })
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        return formatBotResponse(data.choices[0].message.content);
+    }
+
+    async function sendMessage() {
+        if (!currentUser || !currentConversation || !currentConversation.isActive || waiting) return;
+        const input = document.getElementById('questionInput');
+        const question = input.value.trim();
+        if (!question) return;
+        const msgCount = await getMessageCount(currentConversation.id);
+        if (msgCount >= 25) {
+            await closeConversation(currentConversation.id);
+            document.getElementById('limitWarning').innerHTML = '🔒 Диалог достиг лимита 25 сообщений';
+            return;
+        }
+        function addMessageToUI(text, isUser) {
+            const div = document.createElement('div');
+            div.className = 'message ' + (isUser ? 'user' : 'bot');
+            div.innerHTML = text.replace(/\n/g, '<br>');
+            document.getElementById('chatMessages').appendChild(div);
+            div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            return div;
+        }
+        addMessageToUI(question, true);
+        await saveMessage(currentConversation.id, 'user', question);
+        input.value = '';
+        waiting = true;
+        const thinkingDiv = addMessageToUI('🤔 Думаю...', false);
+        try {
+            const allMessages = await loadMessages(currentConversation.id);
+            const aiHistory = allMessages.filter(m => m.role !== 'system').map(m => ({ role: m.role, content: m.content }));
+            let reply = await askAI(question, aiHistory);
+            if (!reply) reply = "❓ Сформулируйте вопрос заново.";
+            thinkingDiv.remove();
+            addMessageToUI(reply, false);
+            await saveMessage(currentConversation.id, 'assistant', reply);
+            const newCount = await getMessageCount(currentConversation.id);
+            if (newCount >= 25) {
+                await closeConversation(currentConversation.id);
+                document.getElementById('limitWarning').innerHTML = '🔒 Диалог автоматически закрыт (25/25)';
+                document.getElementById('questionInput').disabled = true;
+                document.getElementById('sendBtn').disabled = true;
+            } else if (newCount >= 15) {
+                document.getElementById('limitWarning').innerHTML = `⚠️ Осталось ${25 - newCount} сообщений`;
+            } else {
+                document.getElementById('limitWarning').innerHTML = `💬 Сообщений: ${newCount}/25`;
+            }
+            await updateStats();
+        } catch (err) {
+            thinkingDiv.remove();
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'message bot';
+            errorDiv.innerHTML = `❌ Ошибка: ${err.message}`;
+            document.getElementById('chatMessages').appendChild(errorDiv);
+        } finally {
+            waiting = false;
+        }
+    }
+
+    window.onload = async () => {
+        document.getElementById('loginBtn').onclick = loginWithDiscord;
+        document.getElementById('logoutBtn').onclick = logout;
+        document.getElementById('newChatBtn').onclick = () => createNewConversation();
+        document.getElementById('sendBtn').onclick = sendMessage;
+        document.getElementById('questionInput').onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
+        await initDB();
+        checkDiscordAuth();
+    };
+</script>
+</body>
+</html
