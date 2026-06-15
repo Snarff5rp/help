@@ -114,9 +114,6 @@
             background: rgba(59,130,246,0.2);
             border-color: var(--accent);
         }
-        .conv-item.archived {
-            opacity: 0.6;
-        }
         .conv-title {
             font-weight: 500;
             margin-bottom: 4px;
@@ -142,7 +139,6 @@
             cursor: pointer;
             font-size: 14px;
             display: none;
-            z-index: 10;
         }
         .conv-item:hover .delete-conv {
             display: block;
@@ -179,19 +175,6 @@
             background-clip: text;
             color: transparent;
             flex: 1;
-        }
-        .law-badges {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 6px;
-        }
-        .badge {
-            background: rgba(255,255,255,0.05);
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 9px;
-            color: #facc15;
         }
         .chat-messages {
             flex: 1;
@@ -298,12 +281,6 @@
                 max-width: 90%;
                 font-size: 0.8rem;
             }
-            .chat-header h1 {
-                font-size: 1rem;
-            }
-            .conv-title {
-                font-size: 13px;
-            }
         }
     </style>
 </head>
@@ -313,32 +290,32 @@
     <div class="sidebar closed" id="sidebar">
         <div class="user-info" id="userInfo">
             <div id="unauthBlock">
-                <button class="login-btn" id="loginBtn">🔐 Войти через Discord</button>
+                <button class="login-btn" id="loginBtn">Войти через Discord</button>
             </div>
             <div id="authBlock" style="display:none">
                 <img id="userAvatar" class="user-avatar" src="" alt="">
                 <div id="userName" class="user-name"></div>
-                <button class="login-btn logout-btn" id="logoutBtn">🚪 Выйти</button>
+                <button class="login-btn logout-btn" id="logoutBtn">Выйти</button>
             </div>
         </div>
         <div class="conversations-header">
-            <span>📋 Мои диалоги</span>
-            <button class="new-chat-btn" id="newChatBtn" disabled>➕ Новый</button>
+            <span>Мои диалоги</span>
+            <button class="new-chat-btn" id="newChatBtn" disabled>Новый</button>
         </div>
         <div class="conversation-list" id="conversationList">
             <div style="text-align:center; padding:20px; color:var(--text-dim);">Авторизуйтесь для доступа</div>
         </div>
         <div class="user-stats" id="userStats" style="display:none;">
-            📊 <span id="statsText">Загрузка...</span>
+            <span id="statsText">Загрузка...</span>
         </div>
     </div>
     <div class="main-chat">
         <div class="chat-header">
             <button class="menu-btn" id="menuBtn">☰</button>
-            <h1>🤖 Hyuga AI</h1>
+            <h1>Hyuga AI</h1>
         </div>
         <div class="chat-messages" id="chatMessages">
-            <div class="message bot">👋 Авторизуйтесь через Discord, чтобы начать диалог</div>
+            <div class="message bot">Авторизуйтесь через Discord, чтобы начать диалог</div>
         </div>
         <div class="input-area">
             <input type="text" id="questionInput" placeholder="Напишите ваш вопрос..." disabled>
@@ -348,1730 +325,433 @@
     </div>
 </div>
 <script>
-    const DISCORD_CLIENT_ID = '1516071810477592707';
-    const API_KEY = "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";
-    const MODEL = "llama-3.3-70b-versatile";
-    const DAILY_LIMIT = 100;
-    const LAWS_FULL_TEXT = `УК SA Статья 6.2 ч1 Убийство 4 года лишения свободы
-ДК SA Статья 2 Отказ остановиться штраф до 5000$
+const DISCORD_CLIENT_ID = '1516071810477592707';
+const API_KEY = "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";
+const MODEL = "llama-3.3-70b-versatile";
+const DAILY_LIMIT = 100;
+const LAWS_FULL_TEXT = `УК SA Статья 6.2 ч1 Убийство 4 года тюрьмы
+ДК SA Статья 2 Отказ остановиться штраф 5000$
 АдмКодекс SA Статья 11.1 Оскорбление штраф 5000-20000$
-ПК SA Статья 16 Основания задержания при совершении следы фото видео ордер боло-розыск
+ПК SA Статья 16 Основания задержания: следы, видео, ордер
 Конституция SA Статья 1.5 Презумпция невиновности`;
 
-    const DB_NAME = 'HyugaAI_DB';
-    const DB_VERSION = 3;
-    let db = null;
-    let currentUser = null;
-    let currentConversation = null;
-    let conversations = [];
-    let waiting = false;
+const DB_NAME = 'HyugaAI_DB';
+const DB_VERSION = 3;
+let db = null;
+let currentUser = null;
+let currentConversation = null;
+let conversations = [];
+let waiting = false;
 
-    function initDB() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, DB_VERSION);
-            request.onerror = () => reject(request.error);
-            request.onsuccess = () => {
-                db = request.result;
-                resolve();
-            };
-            request.onupgradeneeded = (event) => {
-                const db = event.target.result;
-                if (!db.objectStoreNames.contains('users')) {
-                    db.createObjectStore('users', { keyPath: 'id' });
-                }
-                if (!db.objectStoreNames.contains('conversations')) {
-                    const convStore = db.createObjectStore('conversations', { keyPath: 'id', autoIncrement: true });
-                    convStore.createIndex('userId', 'userId');
-                }
-                if (!db.objectStoreNames.contains('messages')) {
-                    const msgStore = db.createObjectStore('messages', { keyPath: 'id', autoIncrement: true });
-                    msgStore.createIndex('conversationId', 'conversationId');
-                }
-                if (!db.objectStoreNames.contains('dailyStats')) {
-                    db.createObjectStore('dailyStats', { keyPath: 'id' });
-                }
-            };
-        });
-    }
-
-    async function getTodayUserMessagesCount() {
-        if (!currentUser) return 0;
-        const today = new Date().toISOString().split('T')[0];
-        const tx = db.transaction('dailyStats', 'readonly');
-        const store = tx.objectStore('dailyStats');
-        return new Promise((resolve) => {
-            const req = store.get(`${currentUser.id}_${today}`);
-            req.onsuccess = () => {
-                if (req.result) {
-                    resolve(req.result.count);
-                } else {
-                    resolve(0);
-                }
-            };
-            req.onerror = () => resolve(0);
-        });
-    }
-
-    async function incrementTodayUserMessages() {
-        if (!currentUser) return;
-        const today = new Date().toISOString().split('T')[0];
-        const tx = db.transaction('dailyStats', 'readwrite');
-        const store = tx.objectStore('dailyStats');
-        const key = `${currentUser.id}_${today}`;
-        const req = store.get(key);
-        req.onsuccess = async () => {
-            let newCount = 1;
-            if (req.result) {
-                newCount = req.result.count + 1;
-                req.result.count = newCount;
-                await store.put(req.result);
-            } else {
-                await store.put({ id: key, count: 1, userId: currentUser.id, date: today });
+function initDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+            db = request.result;
+            resolve();
+        };
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('users')) {
+                db.createObjectStore('users', { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains('conversations')) {
+                const convStore = db.createObjectStore('conversations', { keyPath: 'id', autoIncrement: true });
+                convStore.createIndex('userId', 'userId');
+            }
+            if (!db.objectStoreNames.contains('messages')) {
+                db.createObjectStore('messages', { keyPath: 'id', autoIncrement: true });
+            }
+            if (!db.objectStoreNames.contains('dailyStats')) {
+                db.createObjectStore('dailyStats', { keyPath: 'id' });
             }
         };
-    }
+    });
+}
 
-    async function saveConversation(conv) {
+async function getTodayUserMessagesCount() {
+    if (!currentUser) return 0;
+    const today = new Date().toISOString().split('T')[0];
+    const tx = db.transaction('dailyStats', 'readonly');
+    const store = tx.objectStore('dailyStats');
+    return new Promise((resolve) => {
+        const req = store.get(`${currentUser.id}_${today}`);
+        req.onsuccess = () => resolve(req.result ? req.result.count : 0);
+        req.onerror = () => resolve(0);
+    });
+}
+
+async function incrementTodayUserMessages() {
+    if (!currentUser) return;
+    const today = new Date().toISOString().split('T')[0];
+    const tx = db.transaction('dailyStats', 'readwrite');
+    const store = tx.objectStore('dailyStats');
+    const key = `${currentUser.id}_${today}`;
+    const req = store.get(key);
+    req.onsuccess = async () => {
+        if (req.result) {
+            req.result.count++;
+            await store.put(req.result);
+        } else {
+            await store.put({ id: key, count: 1 });
+        }
+    };
+}
+
+async function saveConversation(conv) {
+    const tx = db.transaction('conversations', 'readwrite');
+    const store = tx.objectStore('conversations');
+    if (conv.id) {
+        await store.put(conv);
+    } else {
+        conv.createdAt = Date.now();
+        conv.lastActive = Date.now();
+        conv.isActive = true;
+        conv.userId = currentUser.id;
+        conv.title = 'Новый диалог';
+        const id = await store.add(conv);
+        conv.id = id;
+    }
+    return conv;
+}
+
+async function loadUserConversations() {
+    if (!currentUser) return [];
+    const tx = db.transaction('conversations', 'readonly');
+    const store = tx.objectStore('conversations');
+    const index = store.index('userId');
+    return new Promise((resolve) => {
+        const result = [];
+        const request = index.openCursor(IDBKeyRange.only(currentUser.id));
+        request.onsuccess = (e) => {
+            const cursor = e.target.result;
+            if (cursor) {
+                result.push(cursor.value);
+                cursor.continue();
+            } else {
+                resolve(result.sort((a,b) => b.lastActive - a.lastActive));
+            }
+        };
+    });
+}
+
+async function saveMessage(convId, role, content) {
+    const tx = db.transaction(['messages', 'conversations'], 'readwrite');
+    const msgStore = tx.objectStore('messages');
+    await msgStore.add({ conversationId: convId, role, content, createdAt: Date.now() });
+    const convStore = tx.objectStore('conversations');
+    const conv = await new Promise((resolve) => {
+        const req = convStore.get(convId);
+        req.onsuccess = () => resolve(req.result);
+    });
+    if (conv) {
+        conv.lastActive = Date.now();
+        await convStore.put(conv);
+    }
+    if (role === 'user') {
+        await incrementTodayUserMessages();
+    }
+}
+
+async function loadMessages(convId) {
+    const tx = db.transaction('messages', 'readonly');
+    const store = tx.objectStore('messages');
+    return new Promise((resolve) => {
+        const result = [];
+        const request = store.openCursor();
+        request.onsuccess = (e) => {
+            const cursor = e.target.result;
+            if (cursor) {
+                if (cursor.value.conversationId === convId) {
+                    result.push(cursor.value);
+                }
+                cursor.continue();
+            } else {
+                resolve(result.sort((a,b) => a.createdAt - b.createdAt));
+            }
+        };
+    });
+}
+
+async function updateConversationTitle(convId) {
+    const messages = await loadMessages(convId);
+    const firstUserMsg = messages.find(m => m.role === 'user');
+    if (firstUserMsg) {
+        let title = firstUserMsg.content.substring(0, 30);
+        if (firstUserMsg.content.length > 30) title += '...';
         const tx = db.transaction('conversations', 'readwrite');
         const store = tx.objectStore('conversations');
-        if (conv.id) {
-            await store.put(conv);
-        } else {
-            conv.createdAt = Date.now();
-            conv.lastActive = Date.now();
-            conv.isActive = true;
-            conv.userId = currentUser.id;
-            conv.title = 'Новый диалог';
-            const id = await store.add(conv);
-            conv.id = id;
-        }
-        return conv;
-    }
-
-    async function loadUserConversations() {
-        if (!currentUser) return [];
-        const tx = db.transaction('conversations', 'readonly');
-        const store = tx.objectStore('conversations');
-        const index = store.index('userId');
-        return new Promise((resolve) => {
-            const result = [];
-            const request = index.openCursor(IDBKeyRange.only(currentUser.id));
-            request.onsuccess = (e) => {
-                const cursor = e.target.result;
-                if (cursor) {
-                    result.push(cursor.value);
-                    cursor.continue();
-                } else {
-                    resolve(result.sort((a,b) => b.lastActive - a.lastActive));
-                }
-            };
-        });
-    }
-
-    async function saveMessage(conversationId, role, content) {
-        const tx = db.transaction(['messages', 'conversations'], 'readwrite');
-        const msgStore = tx.objectStore('messages');
-        await msgStore.add({ conversationId, role, content, createdAt: Date.now() });
-        const convStore = tx.objectStore('conversations');
         const conv = await new Promise((resolve) => {
-            const req = convStore.get(conversationId);
+            const req = store.get(convId);
             req.onsuccess = () => resolve(req.result);
         });
-        if (conv) {
-            conv.lastActive = Date.now();
-            await convStore.put(conv);
-        }
-        if (role === 'user') {
-            await incrementTodayUserMessages();
+        if (conv && conv.title === 'Новый диалог') {
+            conv.title = title;
+            await store.put(conv);
         }
     }
+}
 
-    async function loadMessages(conversationId) {
-        const tx = db.transaction('messages', 'readonly');
-        const index = tx.objectStore('messages').index('conversationId');
-        return new Promise((resolve) => {
-            const result = [];
-            const request = index.openCursor(IDBKeyRange.only(conversationId));
-            request.onsuccess = (e) => {
-                const cursor = e.target.result;
-                if (cursor) {
-                    result.push(cursor.value);
-                    cursor.continue();
-                } else {
-                    resolve(result.sort((a,b) => a.createdAt - b.createdAt));
-                }
-            };
-        });
+async function deleteConversation(convId) {
+    const messages = await loadMessages(convId);
+    const tx = db.transaction(['messages', 'conversations'], 'readwrite');
+    const msgStore = tx.objectStore('messages');
+    for (const msg of messages) {
+        await msgStore.delete(msg.id);
     }
-
-    async function updateConversationTitle(convId) {
-        const messages = await loadMessages(convId);
-        const firstUserMsg = messages.find(m => m.role === 'user');
-        if (firstUserMsg) {
-            let title = firstUserMsg.content.substring(0, 30);
-            if (firstUserMsg.content.length > 30) title += '...';
-            const tx = db.transaction('conversations', 'readwrite');
-            const store = tx.objectStore('conversations');
-            const conv = await new Promise((resolve) => {
-                const req = store.get(convId);
-                req.onsuccess = () => resolve(req.result);
-            });
-            if (conv && conv.title === 'Новый диалог') {
-                conv.title = title;
-                await store.put(conv);
-            }
-        }
-    }
-
-    async function deleteConversation(convId) {
-        const tx = db.transaction(['conversations', 'messages'], 'readwrite');
-        const msgIndex = tx.objectStore('messages').index('conversationId');
-        const msgs = await new Promise((resolve) => {
-            const result = [];
-            const req = msgIndex.openCursor(IDBKeyRange.only(convId));
-            req.onsuccess = (e) => {
-                const cursor = e.target.result;
-                if (cursor) {
-                    result.push(cursor.value);
-                    cursor.continue();
-                } else {
-                    resolve(result);
-                }
-            };
-        });
-        for (const msg of msgs) {
-            await tx.objectStore('messages').delete(msg.id);
-        }
-        await tx.objectStore('conversations').delete(convId);
-        if (currentConversation?.id === convId) {
-            currentConversation = null;
-            const remainingConvs = await loadUserConversations();
-            if (remainingConvs.length > 0) {
-                await selectConversation(remainingConvs[0].id);
-            } else {
-                document.getElementById('chatMessages').innerHTML = '<div class="message bot">✨ Создайте новый диалог, чтобы начать</div>';
-                document.getElementById('questionInput').disabled = true;
-                document.getElementById('sendBtn').disabled = true;
-            }
-        }
-        await loadConversationsAndRender();
-    }
-
-    const REDIRECT_URI = encodeURIComponent(window.location.href.split('#')[0]);
-    const DISCORD_AUTH_URL = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=token&scope=identify`;
-
-    function checkDiscordAuth() {
-        const hash = window.location.hash.substring(1);
-        const params = new URLSearchParams(hash);
-        const token = params.get('access_token');
-        if (token) {
-            fetchDiscordUser(token);
-            window.history.replaceState({}, document.title, window.location.pathname);
-        } else {
-            const savedUser = localStorage.getItem('hyuga_user');
-            if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                updateUIForAuth();
-                loadConversationsAndRender();
-            } else {
-                updateUIForUnauth();
-            }
-        }
-    }
-
-    async function fetchDiscordUser(token) {
-        try {
-            const res = await fetch('https://discord.com/api/users/@me', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const user = await res.json();
-            if (user.id) {
-                currentUser = {
-                    id: user.id,
-                    username: user.username,
-                    avatar: user.avatar ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png'
-                };
-                localStorage.setItem('hyuga_user', JSON.stringify(currentUser));
-                await initDB();
-                const tx = db.transaction('users', 'readwrite');
-                await tx.objectStore('users').put(currentUser);
-                updateUIForAuth();
-                await loadConversationsAndRender();
-            }
-        } catch(e) {
-            console.error('Discord auth error', e);
-            updateUIForUnauth();
-        }
-    }
-
-    function loginWithDiscord() {
-        window.location.href = DISCORD_AUTH_URL;
-    }
-
-    function logout() {
-        currentUser = null;
-        localStorage.removeItem('hyuga_user');
+    await tx.objectStore('conversations').delete(convId);
+    if (currentConversation?.id === convId) {
         currentConversation = null;
-        updateUIForUnauth();
-        renderConversationList([]);
-        document.getElementById('chatMessages').innerHTML = '<div class="message bot">👋 Авторизуйтесь через Discord, чтобы начать диалог</div>';
-    }
-
-    function updateUIForAuth() {
-        document.getElementById('unauthBlock').style.display = 'none';
-        document.getElementById('authBlock').style.display = 'block';
-        document.getElementById('userName').textContent = currentUser.username;
-        document.getElementById('userAvatar').src = currentUser.avatar;
-        document.getElementById('newChatBtn').disabled = false;
-        document.getElementById('userStats').style.display = 'block';
-        updateStats();
-    }
-
-    function updateUIForUnauth() {
-        document.getElementById('unauthBlock').style.display = 'block';
-        document.getElementById('authBlock').style.display = 'none';
-        document.getElementById('newChatBtn').disabled = true;
-        document.getElementById('questionInput').disabled = true;
-        document.getElementById('sendBtn').disabled = true;
-        document.getElementById('limitWarning').innerHTML = '';
-        document.getElementById('userStats').style.display = 'none';
-    }
-
-    async function updateStats() {
-        if (!currentUser) return;
-        const dailyCount = await getTodayUserMessagesCount();
-        const convs = await loadUserConversations();
-        let totalMessages = 0;
-        for (const conv of convs) {
-            const msgs = await loadMessages(conv.id);
-            totalMessages += msgs.length;
-        }
-        document.getElementById('statsText').innerHTML = `📨 ${dailyCount}/${DAILY_LIMIT} сегодня • 💬 ${totalMessages} всего`;
-        const warningDiv = document.getElementById('limitWarning');
-        if (dailyCount >= DAILY_LIMIT) {
-            warningDiv.innerHTML = '⚠️ Дневной лимит 100 сообщений исчерпан. Завтра сможете продолжить.';
+        const remaining = await loadUserConversations();
+        if (remaining.length > 0) {
+            await selectConversation(remaining[0].id);
+        } else {
+            document.getElementById('chatMessages').innerHTML = '<div class="message bot">Создайте новый диалог</div>';
             document.getElementById('questionInput').disabled = true;
             document.getElementById('sendBtn').disabled = true;
-        } else if (dailyCount >= DAILY_LIMIT - 10) {
-            warningDiv.innerHTML = `⚠️ Осталось ${DAILY_LIMIT - dailyCount} сообщений на сегодня`;
         }
     }
+    await loadConversationsAndRender();
+}
 
-    async function loadConversationsAndRender() {
-        conversations = await loadUserConversations();
-        renderConversationList(conversations);
-        if (conversations.length > 0 && !currentConversation) {
-            await selectConversation(conversations[0].id);
-        }
-        await updateStats();
-    }
-
-    function renderConversationList(convs) {
-        const container = document.getElementById('conversationList');
-        if (!convs.length) {
-            container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-dim);">Нет диалогов<br>Нажмите "Новый"</div>';
-            return;
-        }
-        container.innerHTML = convs.map(conv => {
-            const isActive = currentConversation?.id === conv.id;
-            return `
-                <div class="conv-item ${isActive ? 'active' : ''}" data-id="${conv.id}">
-                    <div class="conv-title">📝 ${conv.title}</div>
-                    <div class="conv-meta">${new Date(conv.createdAt).toLocaleDateString()}</div>
-                    <button class="delete-conv" data-id="${conv.id}">🗑</button>
-                </div>
-            `;
-        }).join('');
-        document.querySelectorAll('.conv-item').forEach(el => {
-            el.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('delete-conv')) {
-                    const id = parseInt(el.dataset.id);
-                    selectConversation(id);
-                }
-            });
-        });
-        document.querySelectorAll('.delete-conv').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const id = parseInt(btn.dataset.id);
-                if (confirm('Удалить этот диалог?')) {
-                    await deleteConversation(id);
-                }
-            });
-        });
-    }
-
-    async function selectConversation(id) {
-        const conv = conversations.find(c => c.id === id);
-        if (!conv) return;
-        currentConversation = conv;
-        await updateConversationTitle(id);
-        await loadConversationsAndRender();
-        const messages = await loadMessages(id);
-        const container = document.getElementById('chatMessages');
-        if (messages.length === 0) {
-            container.innerHTML = '<div class="message bot">✨ Новый диалог. Задайте вопрос по законам SA.</div>';
+function checkDiscordAuth() {
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+    const token = params.get('access_token');
+    if (token) {
+        fetchDiscordUser(token);
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+        const saved = localStorage.getItem('hyuga_user');
+        if (saved) {
+            currentUser = JSON.parse(saved);
+            updateUIForAuth();
+            loadConversationsAndRender();
         } else {
-            container.innerHTML = messages.map(msg => `
-                <div class="message ${msg.role === 'user' ? 'user' : 'bot'}">${msg.content.replace(/\n/g, '<br>')}</div>
-            `).join('');
-        }
-        const dailyCount = await getTodayUserMessagesCount();
-        const input = document.getElementById('questionInput');
-        const sendBtn = document.getElementById('sendBtn');
-        if (dailyCount >= DAILY_LIMIT) {
-            input.disabled = true;
-            sendBtn.disabled = true;
-        } else {
-            input.disabled = false;
-            sendBtn.disabled = false;
-        }
-        await updateStats();
-    }
-
-    async function createNewConversation() {
-        if (!currentUser) return;
-        const dailyCount = await getTodayUserMessagesCount();
-        if (dailyCount >= DAILY_LIMIT) {
-            document.getElementById('limitWarning').innerHTML = '⚠️ Дневной лимит 100 сообщений исчерпан. Завтра сможете продолжить.';
-            return;
-        }
-        const newConv = {
-            title: 'Новый диалог',
-            createdAt: Date.now(),
-            lastActive: Date.now(),
-            isActive: true,
-            userId: currentUser.id
-        };
-        const saved = await saveConversation(newConv);
-        conversations.unshift(saved);
-        await selectConversation(saved.id);
-        renderConversationList(conversations);
-        await updateStats();
-    }
-
-    function formatBotResponse(text) {
-        return text;
-    }
-
-    async function askAI(userQuestion, conversationHistory) {
-        const messages = [
-            { role: "system", content: `Ты юридический помощник Hyuga AI. Отвечай ТОЛЬКО на основе текста законов штата San Andreas. Если в этом тексте нет точного ответа, скажи: В законах SA не нашёл. Отвечай на русском языке. ТЕКСТ ЗАКОНОВ: ${LAWS_FULL_TEXT}` },
-            ...conversationHistory,
-            { role: "user", content: userQuestion }
-        ];
-        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${API_KEY}` },
-            body: JSON.stringify({ model: MODEL, messages, temperature: 0.3, max_tokens: 800 })
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        return formatBotResponse(data.choices[0].message.content);
-    }
-
-    async function sendMessage() {
-        if (!currentUser || !currentConversation || waiting) return;
-        const dailyCount = await getTodayUserMessagesCount();
-        if (dailyCount >= DAILY_LIMIT) {
-            document.getElementById('limitWarning').innerHTML = '⚠️ Дневной лимит 100 сообщений исчерпан. Завтра сможете продолжить.';
-            return;
-        }
-        const input = document.getElementById('questionInput');
-        const question = input.value.trim();
-        if (!question) return;
-        function addMessageToUI(text, isUser) {
-            const div = document.createElement('div');
-            div.className = 'message ' + (isUser ? 'user' : 'bot');
-            div.innerHTML = text.replace(/\n/g, '<br>');
-            document.getElementById('chatMessages').appendChild(div);
-            div.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            return div;
-        }
-        addMessageToUI(question, true);
-        await saveMessage(currentConversation.id, 'user', question);
-        await updateConversationTitle(currentConversation.id);
-        input.value = '';
-        waiting = true;
-        const thinkingDiv = addMessageToUI('🤔 Думаю...', false);
-        try {
-            const allMessages = await loadMessages(currentConversation.id);
-            const aiHistory = allMessages.filter(m => m.role !== 'system').map(m => ({ role: m.role, content: m.content }));
-            let reply = await askAI(question, aiHistory);
-            if (!reply) reply = "❓ Сформулируйте вопрос заново.";
-            thinkingDiv.remove();
-            addMessageToUI(reply, false);
-            await saveMessage(currentConversation.id, 'assistant', reply);
-            await loadConversationsAndRender();
-            await updateStats();
-        } catch (err) {
-            thinkingDiv.remove();
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'message bot';
-            errorDiv.innerHTML = `❌ Ошибка: ${err.message}`;
-            document.getElementById('chatMessages').appendChild(errorDiv);
-        } finally {
-            waiting = false;
-        }
-    }
-
-    window.onload = async () => {
-        document.getElementById('loginBtn').onclick = loginWithDiscord;
-        document.getElementById('logoutBtn').onclick = logout;
-        document.getElementById('newChatBtn').onclick = () => createNewConversation();
-        document.getElementById('sendBtn').onclick = sendMessage;
-        document.getElementById('questionInput').onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
-        document.getElementById('menuBtn').onclick = () => {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('overlay');
-            sidebar.classList.toggle('closed');
-            if (!sidebar.classList.contains('closed')) {
-                overlay.style.display = 'block';
-            } else {
-                overlay.style.display = 'none';
-            }
-        };
-        document.getElementById('overlay').onclick = () => {
-            document.getElementById('sidebar').classList.add('closed');
-            document.getElementById('overlay').style.display = 'none';
-        };
-        await initDB();
-        checkDiscordAuth();
-    };
-</script>
-</body>
-</html>            cursor: pointer;
-            font-weight: bold;
-            width: 100%;
-        }
-        .logout-btn {
-            background: var(--danger);
-            margin-top: 10px;
-        }
-        .conversations-header {
-            padding: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-        }
-        .new-chat-btn {
-            background: var(--accent);
-            border: none;
-            padding: 8px 12px;
-            border-radius: 8px;
-            color: white;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        .conversation-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 8px;
-        }
-        .conv-item {
-            padding: 12px;
-            border-radius: 12px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            background: rgba(255,255,255,0.03);
-            border: 1px solid transparent;
-            position: relative;
-        }
-        .conv-item:hover {
-            background: rgba(59,130,246,0.1);
-            border-color: var(--accent);
-        }
-        .conv-item.active {
-            background: rgba(59,130,246,0.2);
-            border-color: var(--accent);
-        }
-        .conv-item.archived {
-            opacity: 0.6;
-        }
-        .conv-title {
-            font-weight: 500;
-            margin-bottom: 4px;
-            padding-right: 30px;
-            word-break: break-word;
-            font-size: 14px;
-        }
-        .conv-meta {
-            font-size: 10px;
-            color: var(--text-dim);
-        }
-        .delete-conv {
-            position: absolute;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: var(--danger);
-            border: none;
-            color: white;
-            width: 26px;
-            height: 26px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            display: none;
-            z-index: 10;
-        }
-        .conv-item:hover .delete-conv {
-            display: block;
-        }
-        .main-chat {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        .chat-header {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border);
-            background: var(--card-bg);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .menu-btn {
-            background: var(--accent);
-            border: none;
-            color: white;
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            font-size: 20px;
-            cursor: pointer;
-            display: none;
-        }
-        .chat-header h1 {
-            font-size: 1.2rem;
-            background: linear-gradient(135deg, #c084fc, #60a5fa);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            flex: 1;
-        }
-        .law-badges {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 6px;
-        }
-        .badge {
-            background: rgba(255,255,255,0.05);
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 9px;
-            color: #facc15;
-        }
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .message {
-            max-width: 85%;
-            padding: 10px 14px;
-            border-radius: 18px;
-            font-size: 0.85rem;
-            line-height: 1.4;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-        .user {
-            background: var(--accent);
-            color: white;
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
-        }
-        .bot {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid var(--border);
-            align-self: flex-start;
-            border-bottom-left-radius: 4px;
-        }
-        .input-area {
-            padding: 12px 16px;
-            border-top: 1px solid var(--border);
-            display: flex;
-            gap: 10px;
-            background: var(--card-bg);
-        }
-        .input-area input {
-            flex: 1;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid var(--border);
-            border-radius: 40px;
-            padding: 10px 16px;
-            color: white;
-            font-size: 0.85rem;
-            outline: none;
-        }
-        .input-area input:focus {
-            border-color: var(--accent);
-        }
-        .input-area button {
-            background: var(--accent);
-            border: none;
-            border-radius: 40px;
-            padding: 0 20px;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .input-area button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .limit-warning {
-            background: rgba(245,158,11,0.2);
-            padding: 6px 12px;
-            font-size: 11px;
-            text-align: center;
-            border-top: 1px solid var(--border);
-            color: var(--warning);
-        }
-        .user-stats {
-            padding: 10px;
-            font-size: 10px;
-            color: var(--text-dim);
-            border-top: 1px solid var(--border);
-            background: rgba(0,0,0,0.2);
-            text-align: center;
-        }
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 99;
-            display: none;
-        }
-        @media (max-width: 768px) {
-            .sidebar {
-                position: fixed;
-                z-index: 100;
-                height: 100%;
-                width: 280px;
-            }
-            .menu-btn {
-                display: block;
-            }
-            .sidebar.closed {
-                transform: translateX(-100%);
-            }
-            .message {
-                max-width: 90%;
-                font-size: 0.8rem;
-            }
-            .chat-header h1 {
-                font-size: 1rem;
-            }
-            .conv-title {
-                font-size: 13px;
-            }
-        }
-    </style>
-</head>
-<body>
-<div class="overlay" id="overlay"></div>
-<div class="app-layout">
-    <div class="sidebar closed" id="sidebar">
-        <div class="user-info" id="userInfo">
-            <div id="unauthBlock">
-                <button class="login-btn" id="loginBtn">🔐 Войти через Discord</button>
-            </div>
-            <div id="authBlock" style="display:none">
-                <img id="userAvatar" class="user-avatar" src="" alt="">
-                <div id="userName" class="user-name"></div>
-                <button class="login-btn logout-btn" id="logoutBtn">🚪 Выйти</button>
-            </div>
-        </div>
-        <div class="conversations-header">
-            <span>📋 Мои диалоги</span>
-            <button class="new-chat-btn" id="newChatBtn" disabled>➕ Новый</button>
-        </div>
-        <div class="conversation-list" id="conversationList">
-            <div style="text-align:center; padding:20px; color:var(--text-dim);">Авторизуйтесь для доступа</div>
-        </div>
-        <div class="user-stats" id="userStats" style="display:none;">
-            📊 <span id="statsText">Загрузка...</span>
-        </div>
-    </div>
-    <div class="main-chat">
-        <div class="chat-header">
-            <button class="menu-btn" id="menuBtn">☰</button>
-            <h1>🤖 Hyuga AI</h1>
-        </div>
-        <div class="chat-messages" id="chatMessages">
-            <div class="message bot">👋 Авторизуйтесь через Discord, чтобы начать диалог</div>
-        </div>
-        <div class="input-area">
-            <input type="text" id="questionInput" placeholder="Напишите ваш вопрос..." disabled>
-            <button id="sendBtn" disabled>Отправить</button>
-        </div>
-        <div class="limit-warning" id="limitWarning"></div>
-    </div>
-</div>
-<script>
-    const DISCORD_CLIENT_ID = '1516071810477592707';
-    const API_KEY = "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";
-    const MODEL = "llama-3.3-70b-versatile";
-    const DAILY_LIMIT = 100;
-    const LAWS_FULL_TEXT = `УК SA Статья 6.2 ч1 Убийство 4 года лишения свободы
-ДК SA Статья 2 Отказ остановиться штраф до 5000$
-АдмКодекс SA Статья 11.1 Оскорбление штраф 5000-20000$
-ПК SA Статья 16 Основания задержания при совершении следы фото видео ордер боло-розыск
-Конституция SA Статья 1.5 Презумпция невиновности`;
-
-    const DB_NAME = 'HyugaAI_DB';
-    const DB_VERSION = 3;
-    let db = null;
-    let currentUser = null;
-    let currentConversation = null;
-    let conversations = [];
-    let waiting = false;
-
-    function initDB() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, DB_VERSION);
-            request.onerror = () => reject(request.error);
-            request.onsuccess = () => {
-                db = request.result;
-                resolve();
-            };
-            request.onupgradeneeded = (event) => {
-                const db = event.target.result;
-                if (!db.objectStoreNames.contains('users')) {
-                    db.createObjectStore('users', { keyPath: 'id' });
-                }
-                if (!db.objectStoreNames.contains('conversations')) {
-                    const convStore = db.createObjectStore('conversations', { keyPath: 'id', autoIncrement: true });
-                    convStore.createIndex('userId', 'userId');
-                }
-                if (!db.objectStoreNames.contains('messages')) {
-                    const msgStore = db.createObjectStore('messages', { keyPath: 'id', autoIncrement: true });
-                    msgStore.createIndex('conversationId', 'conversationId');
-                }
-                if (!db.objectStoreNames.contains('dailyStats')) {
-                    db.createObjectStore('dailyStats', { keyPath: 'id' });
-                }
-            };
-        });
-    }
-
-    async function getTodayUserMessagesCount() {
-        if (!currentUser) return 0;
-        const today = new Date().toISOString().split('T')[0];
-        const tx = db.transaction('dailyStats', 'readonly');
-        const store = tx.objectStore('dailyStats');
-        return new Promise((resolve) => {
-            const req = store.get(`${currentUser.id}_${today}`);
-            req.onsuccess = () => {
-                if (req.result) {
-                    resolve(req.result.count);
-                } else {
-                    resolve(0);
-                }
-            };
-            req.onerror = () => resolve(0);
-        });
-    }
-
-    async function incrementTodayUserMessages() {
-        if (!currentUser) return;
-        const today = new Date().toISOString().split('T')[0];
-        const tx = db.transaction('dailyStats', 'readwrite');
-        const store = tx.objectStore('dailyStats');
-        const key = `${currentUser.id}_${today}`;
-        const req = store.get(key);
-        req.onsuccess = async () => {
-            let newCount = 1;
-            if (req.result) {
-                newCount = req.result.count + 1;
-                req.result.count = newCount;
-                await store.put(req.result);
-            } else {
-                await store.put({ id: key, count: 1, userId: currentUser.id, date: today });
-            }
-        };
-    }
-
-    async function saveConversation(conv) {
-        const tx = db.transaction('conversations', 'readwrite');
-        const store = tx.objectStore('conversations');
-        if (conv.id) {
-            await store.put(conv);
-        } else {
-            conv.createdAt = Date.now();
-            conv.lastActive = Date.now();
-            conv.isActive = true;
-            conv.userId = currentUser.id;
-            conv.title = 'Новый диалог';
-            const id = await store.add(conv);
-            conv.id = id;
-        }
-        return conv;
-    }
-
-    async function loadUserConversations() {
-        if (!currentUser) return [];
-        const tx = db.transaction('conversations', 'readonly');
-        const store = tx.objectStore('conversations');
-        const index = store.index('userId');
-        return new Promise((resolve) => {
-            const result = [];
-            const request = index.openCursor(IDBKeyRange.only(currentUser.id));
-            request.onsuccess = (e) => {
-                const cursor = e.target.result;
-                if (cursor) {
-                    result.push(cursor.value);
-                    cursor.continue();
-                } else {
-                    resolve(result.sort((a,b) => b.lastActive - a.lastActive));
-                }
-            };
-        });
-    }
-
-    async function saveMessage(conversationId, role, content) {
-        const tx = db.transaction(['messages', 'conversations'], 'readwrite');
-        const msgStore = tx.objectStore('messages');
-        await msgStore.add({ conversationId, role, content, createdAt: Date.now() });
-        const convStore = tx.objectStore('conversations');
-        const conv = await new Promise((resolve) => {
-            const req = convStore.get(conversationId);
-            req.onsuccess = () => resolve(req.result);
-        });
-        if (conv) {
-            conv.lastActive = Date.now();
-            await convStore.put(conv);
-        }
-        if (role === 'user') {
-            await incrementTodayUserMessages();
-        }
-    }
-
-    async function loadMessages(conversationId) {
-        const tx = db.transaction('messages', 'readonly');
-        const index = tx.objectStore('messages').index('conversationId');
-        return new Promise((resolve) => {
-            const result = [];
-            const request = index.openCursor(IDBKeyRange.only(conversationId));
-            request.onsuccess = (e) => {
-                const cursor = e.target.result;
-                if (cursor) {
-                    result.push(cursor.value);
-                    cursor.continue();
-                } else {
-                    resolve(result.sort((a,b) => a.createdAt - b.createdAt));
-                }
-            };
-        });
-    }
-
-    async function updateConversationTitle(convId) {
-        const messages = await loadMessages(convId);
-        const firstUserMsg = messages.find(m => m.role === 'user');
-        if (firstUserMsg) {
-            let title = firstUserMsg.content.substring(0, 30);
-            if (firstUserMsg.content.length > 30) title += '...';
-            const tx = db.transaction('conversations', 'readwrite');
-            const store = tx.objectStore('conversations');
-            const conv = await new Promise((resolve) => {
-                const req = store.get(convId);
-                req.onsuccess = () => resolve(req.result);
-            });
-            if (conv && conv.title === 'Новый диалог') {
-                conv.title = title;
-                await store.put(conv);
-            }
-        }
-    }
-
-    async function deleteConversation(convId) {
-        const tx = db.transaction(['conversations', 'messages'], 'readwrite');
-        const msgIndex = tx.objectStore('messages').index('conversationId');
-        const msgs = await new Promise((resolve) => {
-            const result = [];
-            const req = msgIndex.openCursor(IDBKeyRange.only(convId));
-            req.onsuccess = (e) => {
-                const cursor = e.target.result;
-                if (cursor) {
-                    result.push(cursor.value);
-                    cursor.continue();
-                } else {
-                    resolve(result);
-                }
-            };
-        });
-        for (const msg of msgs) {
-            await tx.objectStore('messages').delete(msg.id);
-        }
-        await tx.objectStore('conversations').delete(convId);
-        if (currentConversation?.id === convId) {
-            currentConversation = null;
-            const remainingConvs = await loadUserConversations();
-            if (remainingConvs.length > 0) {
-                await selectConversation(remainingConvs[0].id);
-            } else {
-                document.getElementById('chatMessages').innerHTML = '<div class="message bot">✨ Создайте новый диалог, чтобы начать</div>';
-                document.getElementById('questionInput').disabled = true;
-                document.getElementById('sendBtn').disabled = true;
-            }
-        }
-        await loadConversationsAndRender();
-    }
-
-    const REDIRECT_URI = encodeURIComponent(window.location.href.split('#')[0]);
-    const DISCORD_AUTH_URL = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=token&scope=identify`;
-
-    function checkDiscordAuth() {
-        const hash = window.location.hash.substring(1);
-        const params = new URLSearchParams(hash);
-        const token = params.get('access_token');
-        if (token) {
-            fetchDiscordUser(token);
-            window.history.replaceState({}, document.title, window.location.pathname);
-        } else {
-            const savedUser = localStorage.getItem('hyuga_user');
-            if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                updateUIForAuth();
-                loadConversationsAndRender();
-            } else {
-                updateUIForUnauth();
-            }
-        }
-    }
-
-    async function fetchDiscordUser(token) {
-        try {
-            const res = await fetch('https://discord.com/api/users/@me', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const user = await res.json();
-            if (user.id) {
-                currentUser = {
-                    id: user.id,
-                    username: user.username,
-                    avatar: user.avatar ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png` : 'https://cdpng'
-                };
-                localStorage.setItem('hyuga_user', JSON.stringify(currentUser));
-                await initDB();
-                const tx = db.transaction('users', 'readwrite');
-                await tx.objectStore('users').put(currentUser);
-                updateUIForAuth();
-                await loadConversationsAndRender();
-            }
-        } catch(e) {
-            console.error('Discord auth error', e);
             updateUIForUnauth();
         }
     }
+}
 
-    function loginWithDiscord() {
-        window.location.href = DISCORD_AUTH_URL;
-    }
-
-    function logout() {
-        currentUser = null;
-        localStorage.removeItem('hyuga_user');
-        currentConversation = null;
+async function fetchDiscordUser(token) {
+    try {
+        const res = await fetch('https://discord.com/api/users/@me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const user = await res.json();
+        if (user.id) {
+            currentUser = {
+                id: user.id,
+                username: user.username,
+                avatar: user.avatar ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png'
+            };
+            localStorage.setItem('hyuga_user', JSON.stringify(currentUser));
+            await initDB();
+            updateUIForAuth();
+            await loadConversationsAndRender();
+        }
+    } catch(e) {
         updateUIForUnauth();
-        renderConversationList([]);
-        document.getElementById('chatMessages').innerHTML = '<div class="message bot">👋 Авторизуйтесь через Discord, чтобы начать диалог</div>';
     }
+}
 
-    function updateUIForAuth() {
-        document.getElementById('unauthBlock').style.display = 'none';
-        document.getElementById('authBlock').style.display = 'block';
-        document.getElementById('userName').textContent = currentUser.username;
-        document.getElementById('userAvatar').src = currentUser.avatar;
-        document.getElementById('newChatBtn').disabled = false;
-        document.getElementById('userStats').style.display = 'block';
-        updateStats();
-    }
+function loginWithDiscord() {
+    const url = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(window.location.href.split('#')[0])}&response_type=token&scope=identify`;
+    window.location.href = url;
+}
 
-    function updateUIForUnauth() {
-        document.getElementById('unauthBlock').style.display = 'block';
-        document.getElementById('authBlock').style.display = 'none';
-        document.getElementById('newChatBtn').disabled = true;
+function logout() {
+    currentUser = null;
+    localStorage.removeItem('hyuga_user');
+    currentConversation = null;
+    updateUIForUnauth();
+    renderConversationList([]);
+    document.getElementById('chatMessages').innerHTML = '<div class="message bot">Авторизуйтесь через Discord</div>';
+}
+
+function updateUIForAuth() {
+    document.getElementById('unauthBlock').style.display = 'none';
+    document.getElementById('authBlock').style.display = 'block';
+    document.getElementById('userName').textContent = currentUser.username;
+    document.getElementById('userAvatar').src = currentUser.avatar;
+    document.getElementById('newChatBtn').disabled = false;
+    document.getElementById('userStats').style.display = 'block';
+    updateStats();
+}
+
+function updateUIForUnauth() {
+    document.getElementById('unauthBlock').style.display = 'block';
+    document.getElementById('authBlock').style.display = 'none';
+    document.getElementById('newChatBtn').disabled = true;
+    document.getElementById('questionInput').disabled = true;
+    document.getElementById('sendBtn').disabled = true;
+    document.getElementById('userStats').style.display = 'none';
+}
+
+async function updateStats() {
+    if (!currentUser) return;
+    const daily = await getTodayUserMessagesCount();
+    document.getElementById('statsText').innerHTML = `Сегодня: ${daily}/${DAILY_LIMIT} сообщений`;
+    if (daily >= DAILY_LIMIT) {
+        document.getElementById('limitWarning').innerHTML = 'Дневной лимит 100 сообщений исчерпан';
         document.getElementById('questionInput').disabled = true;
         document.getElementById('sendBtn').disabled = true;
-        document.getElementById('limitWarning').innerHTML = '';
-        document.getElementById('userStats').style.display = 'none';
-    }
-
-    async function updateStats() {
-        if (!currentUser) return;
-        const dailyCount = await getTodayUserMessagesCount();
-        const convs = await loadUserConversations();
-        let totalMessages = 0;
-        for (const conv of convs) {
-            const msgs = await loadMessages(conv.id);
-            totalMessages += msgs.length;
-        }
-        document.getElementById('statsText').innerHTML = `📨 ${dailyCount}/${DAILY_LIMIT} сегодня • 💬 ${totalMessages} всего`;
-        const warningDiv = document.getElementById('limitWarning');
-        if (dailyCount >= DAILY_LIMIT) {
-            warningDiv.innerHTML = '⚠️ Дневной лимит 100 сообщений исчерпан. Завтра сможете продолжить.';
-            document.getElementById('questionInput').disabled = true;
-            document.getElementById('sendBtn').disabled = true;
-        } else if (dailyCount >= DAILY_LIMIT - 10) {
-            warningDiv.innerHTML = `⚠️ Осталось ${DAILY_LIMIT - dailyCount} сообщений на сегодня`;
-        }
-    }
-
-    async function loadConversationsAndRender() {
-        conversations = await loadUserConversations();
-        renderConversationList(conversations);
-        if (conversations.length > 0 && !currentConversation) {
-            await selectConversation(conversations[0].id);
-        }
-        await updateStats();
-    }
-
-    function renderConversationList(convs) {
-        const container = document.getElementById('conversationList');
-        if (!convs.length) {
-            container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-dim);">Нет диалогов<br>Нажмите "Новый"</div>';
-            return;
-        }
-        container.innerHTML = convs.map(conv => {
-            const isActive = currentConversation?.id === conv.id;
-            return `
-                <div class="conv-item ${isActive ? 'active' : ''}" data-id="${conv.id}">
-                    <div class="conv-title">📝 ${conv.title}</div>
-                    <div class="conv-meta">${new Date(conv.createdAt).toLocaleDateString()}</div>
-                    <button class="delete-conv" data-id="${conv.id}">🗑</button>
-                </div>
-            `;
-        }).join('');
-        document.querySelectorAll('.conv-item').forEach(el => {
-            el.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('delete-conv')) {
-                    const id = parseInt(el.dataset.id);
-                    selectConversation(id);
-                }
-            });
-        });
-        document.querySelectorAll('.delete-conv').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const id = parseInt(btn.dataset.id);
-                if (confirm('Удалить этот диалог?')) {
-                    await deleteConversation(id);
-                }
-            });
-        });
-    }
-
-    async function selectConversation(id) {
-        const conv = conversations.find(c => c.id === id);
-        if (!conv) return;
-        currentConversation = conv;
-        await updateConversationTitle(id);
-        await loadConversationsAndRender();
-        const messages = await loadMessages(id);
-        const container = document.getElementById('chatMessages');
-        if (messages.length === 0) {
-            container.innerHTML = '<div class="message bot">✨ Новый диалог. Задайте вопрос по законам SA.</div>';
-        } else {
-            container.innerHTML = messages.map(msg => `
-                <div class="message ${msg.role === 'user' ? 'user' : 'bot'}">${msg.content.replace(/\n/g, '<br>')}</div>
-            `).join('');
-        }
-        const dailyCount = await getTodayUserMessagesCount();
-        const input = document.getElementById('questionInput');
-        const sendBtn = document.getElementById('sendBtn');
-        if (dailyCount >= DAILY_LIMIT) {
-            input.disabled = true;
-            sendBtn.disabled = true;
-        } else {
-            input.disabled = false;
-            sendBtn.disabled = false;
-        }
-        await updateStats();
-    }
-
-    async function createNewConversation() {
-        if (!currentUser) return;
-        const dailyCount = await getTodayUserMessagesCount();
-        if (dailyCount >= DAILY_LIMIT) {
-            document.getElementById('limitWarning').innerHTML = '⚠️ Дневной лимит 100 сообщений исчерпан. Завтра сможете продолжить.';
-            return;
-        }
-        const newConv = {
-            title: 'Новый диалог',
-            createdAt: Date.now(),
-            lastActive: Date.now(),
-            isActive: true,
-            userId: currentUser.id
-        };
-        const saved = await saveConversation(newConv);
-        conversations.unshift(saved);
-        await selectConversation(saved.id);
-        renderConversationList(conversations);
-        await updateStats();
-    }
-
-    function formatBotResponse(text) {
-        return text;
-    }
-
-    async function askAI(userQuestion, conversationHistory) {
-        const messages = [
-            { role: "system", content: `Ты юридический помощник Hyuga AI. Отвечай ТОЛЬКО на основе текста законов штата San Andreas. Если в этом тексте нет точного ответа, скажи: В законах SA не нашёл. Отвечай на русском языке. ТЕКСТ ЗАКОНОВ: ${LAWS_FULL_TEXT}` },
-            ...conversationHistory,
-            { role: "user", content: userQuestion }
-        ];
-        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${API_KEY}` },
-            body: JSON.stringify({ model: MODEL, messages, temperature: 0.3, max_tokens: 800 })
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        return formatBotResponse(data.choices[0].message.content);
-    }
-
-    async function sendMessage() {
-        if (!currentUser || !currentConversation || waiting) return;
-        const dailyCount = await getTodayUserMessagesCount();
-        if (dailyCount >= DAILY_LIMIT) {
-            document.getElementById('limitWarning').innerHTML = '⚠️ Дневной лимит 100 сообщений исчерпан. Завтра сможете продолжить.';
-            return;
-        }
-        const input = document.getElementById('questionInput');
-        const question = input.value.trim();
-        if (!question) return;
-        function addMessageToUI(text, isUser) {
-            const div = document.createElement('div');
-            div.className = 'message ' + (isUser ? 'user' : 'bot');
-            div.innerHTML = text.replace(/\n/g, '<br>');
-            document.getElementById('chatMessages').appendChild(div);
-            div.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            return div;
-        }
-        addMessageToUI(question, true);
-        await saveMessage(currentConversation.id, 'user', question);
-        await updateConversationTitle(currentConversation.id);
-        input.value = '';
-        waiting = true;
-        const thinkingDiv = addMessageToUI('🤔 Думаю...', false);
-        try {
-            const allMessages = await loadMessages(currentConversation.id);
-            const aiHistory = allMessages.filter(m => m.role !== 'system').map(m => ({ role: m.role, content: m.content }));
-            let reply = await askAI(question, aiHistory);
-            if (!reply) reply = "❓ Сформулируйте вопрос заново.";
-            thinkingDiv.remove();
-            addMessageToUI(reply, false);
-            await saveMessage(currentConversation.id, 'assistant', reply);
-            await loadConversationsAndRender();
-            await updateStats();
-        } catch (err) {
-            thinkingDiv.remove();
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'message bot';
-            errorDiv.innerHTML = `❌ Ошибка: ${err.message}`;
-            document.getElementById('chatMessages').appendChild(errorDiv);
-        } finally {
-            waiting = false;
-        }
-    }
-
-    window.onload = async () => {
-        document.getElementById('loginBtn').onclick = loginWithDiscord;
-        document.getElementById('logoutBtn').onclick = logout;
-        document.getElementById('newChatBtn').onclick = () => createNewConversation();
-        document.getElementById('sendBtn').onclick = sendMessage;
-        document.getElementById('questionInput').onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
-        document.getElementById('menuBtn').onclick = () => {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('overlay');
-            sidebar.classList.toggle('closed');
-            if (!sidebar.classList.contains('closed')) {
-                overlay.style.display = 'block';
-            } else {
-                overlay.style.display = 'none';
-            }
-        };
-        document.getElementById('overlay').onclick = () => {
-            document.getElementById('sidebar').classList.add('closed');
-            document.getElementById('overlay').style.display = 'none';
-        };
-        await initDB();
-        checkDiscordAuth();
-    };
-</script>
-</body>
-    </html>        }
-        @media (max-width: 768px) {
-            .sidebar { width: 280px; }
-            .message { max-width: 95%; }
-        }
-    </style>
-</head>
-<body>
-<div class="app-layout">
-    <div class="sidebar">
-        <div class="user-info" id="userInfo">
-            <div id="unauthBlock">
-                <button class="login-btn" id="loginBtn">🔐 Войти через Discord</button>
-            </div>
-            <div id="authBlock" style="display:none">
-                <img id="userAvatar" class="user-avatar" src="" alt="">
-                <div id="userName" class="user-name"></div>
-                <button class="login-btn logout-btn" id="logoutBtn">🚪 Выйти</button>
-            </div>
-        </div>
-        <div class="conversations-header">
-            <span>📋 Мои диалоги</span>
-            <button class="new-chat-btn" id="newChatBtn" disabled>➕ Новый</button>
-        </div>
-        <div class="conversation-list" id="conversationList">
-            <div style="text-align:center; padding:20px; color:var(--text-dim);">Авторизуйтесь для доступа</div>
-        </div>
-        <div class="user-stats" id="userStats" style="display:none;">
-            📊 Статистика: <span id="statsText">Загрузка...</span>
-        </div>
-    </div>
-    <div class="main-chat">
-        <div class="chat-header">
-            <h1>🤖 Hyuga AI • Юридический помощник SA</h1>
-            <div class="law-badges">
-                <span class="badge">⚖️ УК SA</span>
-                <span class="badge">🚦 ДК SA</span>
-                <span class="badge">📋 АдмКодекс SA</span>
-                <span class="badge">📜 ПК SA</span>
-                <span class="badge">🏛️ Конституция SA</span>
-            </div>
-        </div>
-        <div class="chat-messages" id="chatMessages">
-            <div class="message bot">👋 Авторизуйтесь через Discord, чтобы начать диалог</div>
-        </div>
-        <div class="input-area">
-            <input type="text" id="questionInput" placeholder="Напишите ваш вопрос..." disabled>
-            <button id="sendBtn" disabled>Отправить</button>
-        </div>
-        <div class="limit-warning" id="limitWarning"></div>
-    </div>
-</div>
-<script>
-    const DISCORD_CLIENT_ID = '1516071810477592707';
-    const API_KEY = "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";
-    const MODEL = "llama-3.3-70b-versatile";
-    const LAWS_FULL_TEXT = `УК SA Статья 6.2 ч1 Убийство 4 года лишения свободы
-ДК SA Статья 2 Отказ остановиться штраф до 5000$
-АдмКодекс SA Статья 11.1 Оскорбление штраф 5000-20000$
-ПК SA Статья 16 Основания задержания при совершении следы фото видео ордер боло-розыск
-Конституция SA Статья 1.5 Презумпция невиновности`;
-
-    const DB_NAME = 'HyugaAI_DB';
-    const DB_VERSION = 2;
-    let db = null;
-    let currentUser = null;
-    let currentConversation = null;
-    let conversations = [];
-    let waiting = false;
-
-    function initDB() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, DB_VERSION);
-            request.onerror = () => reject(request.error);
-            request.onsuccess = () => {
-                db = request.result;
-                resolve();
-            };
-            request.onupgradeneeded = (event) => {
-                const db = event.target.result;
-                if (!db.objectStoreNames.contains('users')) {
-                    db.createObjectStore('users', { keyPath: 'id' });
-                }
-                if (!db.objectStoreNames.contains('conversations')) {
-                    const convStore = db.createObjectStore('conversations', { keyPath: 'id', autoIncrement: true });
-                    convStore.createIndex('userId', 'userId');
-                }
-                if (!db.objectStoreNames.contains('messages')) {
-                    const msgStore = db.createObjectStore('messages', { keyPath: 'id', autoIncrement: true });
-                    msgStore.createIndex('conversationId', 'conversationId');
-                }
-            };
-        });
-    }
-
-    async function saveConversation(conv) {
-        const tx = db.transaction('conversations', 'readwrite');
-        const store = tx.objectStore('conversations');
-        if (conv.id) {
-            await store.put(conv);
-        } else {
-            conv.createdAt = Date.now();
-            conv.lastActive = Date.now();
-            conv.isActive = true;
-            conv.userId = currentUser.id;
-            conv.title = conv.title || `Диалог ${new Date().toLocaleString()}`;
-            const id = await store.add(conv);
-            conv.id = id;
-        }
-        return conv;
-    }
-
-    async function loadUserConversations() {
-        if (!currentUser) return [];
-        const tx = db.transaction('conversations', 'readonly');
-        const store = tx.objectStore('conversations');
-        const index = store.index('userId');
-        return new Promise((resolve) => {
-            const result = [];
-            const request = index.openCursor(IDBKeyRange.only(currentUser.id));
-            request.onsuccess = (e) => {
-                const cursor = e.target.result;
-                if (cursor) {
-                    result.push(cursor.value);
-                    cursor.continue();
-                } else {
-                    resolve(result.sort((a,b) => b.lastActive - a.lastActive));
-                }
-            };
-        });
-    }
-
-    async function saveMessage(conversationId, role, content) {
-        const tx = db.transaction(['messages', 'conversations'], 'readwrite');
-        const msgStore = tx.objectStore('messages');
-        await msgStore.add({ conversationId, role, content, createdAt: Date.now() });
-        const convStore = tx.objectStore('conversations');
-        const conv = await new Promise((resolve) => {
-            const req = convStore.get(conversationId);
-            req.onsuccess = () => resolve(req.result);
-        });
-        if (conv) {
-            conv.lastActive = Date.now();
-            await convStore.put(conv);
-        }
-    }
-
-    async function loadMessages(conversationId) {
-        const tx = db.transaction('messages', 'readonly');
-        const index = tx.objectStore('messages').index('conversationId');
-        return new Promise((resolve) => {
-            const result = [];
-            const request = index.openCursor(IDBKeyRange.only(conversationId));
-            request.onsuccess = (e) => {
-                const cursor = e.target.result;
-                if (cursor) {
-                    result.push(cursor.value);
-                    cursor.continue();
-                } else {
-                    resolve(result.sort((a,b) => a.createdAt - b.createdAt));
-                }
-            };
-        });
-    }
-
-    async function getMessageCount(conversationId) {
-        const messages = await loadMessages(conversationId);
-        return messages.length;
-    }
-
-    const REDIRECT_URI = encodeURIComponent(window.location.href.split('#')[0]);
-    const DISCORD_AUTH_URL = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=token&scope=identify`;
-
-    function checkDiscordAuth() {
-        const hash = window.location.hash.substring(1);
-        const params = new URLSearchParams(hash);
-        const token = params.get('access_token');
-        if (token) {
-            fetchDiscordUser(token);
-            window.history.replaceState({}, document.title, window.location.pathname);
-        } else {
-            const savedUser = localStorage.getItem('hyuga_user');
-            if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                updateUIForAuth();
-                loadConversationsAndRender();
-            } else {
-                updateUIForUnauth();
-            }
-        }
-    }
-
-    async function fetchDiscordUser(token) {
-        try {
-            const res = await fetch('https://discord.com/api/users/@me', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const user = await res.json();
-            if (user.id) {
-                currentUser = {
-                    id: user.id,
-                    username: user.username,
-                    avatar: user.avatar ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png'
-                };
-                localStorage.setItem('hyuga_user', JSON.stringify(currentUser));
-                await initDB();
-                const tx = db.transaction('users', 'readwrite');
-                await tx.objectStore('users').put(currentUser);
-                updateUIForAuth();
-                await loadConversationsAndRender();
-            }
-        } catch(e) {
-            console.error('Discord auth error', e);
-            updateUIForUnauth();
-        }
-    }
-
-    function loginWithDiscord() {
-        window.location.href = DISCORD_AUTH_URL;
-    }
-
-    function logout() {
-        currentUser = null;
-        localStorage.removeItem('hyuga_user');
-        currentConversation = null;
-        updateUIForUnauth();
-        renderConversationList([]);
-        document.getElementById('chatMessages').innerHTML = '<div class="message bot">👋 Авторизуйтесь через Discord, чтобы начать диалог</div>';
-    }
-
-    function updateUIForAuth() {
-        document.getElementById('unauthBlock').style.display = 'none';
-        document.getElementById('authBlock').style.display = 'block';
-        document.getElementById('userName').textContent = currentUser.username;
-        document.getElementById('userAvatar').src = currentUser.avatar;
-        document.getElementById('newChatBtn').disabled = false;
+    } else {
         document.getElementById('questionInput').disabled = false;
         document.getElementById('sendBtn').disabled = false;
-        document.getElementById('userStats').style.display = 'block';
-        updateStats();
     }
+}
 
-    function updateUIForUnauth() {
-        document.getElementById('unauthBlock').style.display = 'block';
-        document.getElementById('authBlock').style.display = 'none';
-        document.getElementById('newChatBtn').disabled = true;
-        document.getElementById('questionInput').disabled = true;
-        document.getElementById('sendBtn').disabled = true;
-        document.getElementById('limitWarning').innerHTML = '';
-        document.getElementById('userStats').style.display = 'none';
+async function loadConversationsAndRender() {
+    conversations = await loadUserConversations();
+    renderConversationList(conversations);
+    if (conversations.length > 0 && !currentConversation) {
+        await selectConversation(conversations[0].id);
     }
+}
 
-    async function updateStats() {
-        if (!currentUser) return;
-        const convs = await loadUserConversations();
-        let totalMessages = 0;
-        let activeCount = 0;
-        for (const conv of convs) {
-            const msgs = await loadMessages(conv.id);
-            totalMessages += msgs.length;
-            if (conv.isActive) activeCount++;
-        }
-        document.getElementById('statsText').innerHTML = `${totalMessages} сообщ. • ${activeCount} актив. диал.`;
+function renderConversationList(convs) {
+    const container = document.getElementById('conversationList');
+    if (!convs.length) {
+        container.innerHTML = '<div style="text-align:center; padding:20px;">Нет диалогов</div>';
+        return;
     }
-
-    async function loadConversationsAndRender() {
-        conversations = await loadUserConversations();
-        renderConversationList(conversations);
-        if (conversations.length > 0 && !currentConversation) {
-            await selectConversation(conversations[0].id);
-        } else if (conversations.length === 0) {
-            await createNewConversation();
-        }
-        await updateStats();
-    }
-
-    function renderConversationList(convs) {
-        const container = document.getElementById('conversationList');
-        if (!convs.length) {
-            container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-dim);">Нет диалогов<br>Нажмите "Новый"</div>';
-            return;
-        }
-        container.innerHTML = convs.map(conv => {
-            const isArchived = !conv.isActive;
-            const isActive = currentConversation?.id === conv.id;
-            return `
-                <div class="conv-item ${isArchived ? 'archived' : ''} ${isActive ? 'active' : ''}" data-id="${conv.id}">
-                    <div class="conv-title">📝 ${conv.title} ${isArchived ? '🔒' : '💬'}</div>
-                    <div class="conv-meta">${new Date(conv.createdAt).toLocaleDateString()}</div>
-                    ${isArchived ? '<div class="conv-warning">⏰ Только чтение</div>' : ''}
-                </div>
-            `;
-        }).join('');
-        document.querySelectorAll('.conv-item').forEach(el => {
-            el.addEventListener('click', () => {
-                const id = parseInt(el.dataset.id);
-                selectConversation(id);
-            });
-        });
-    }
-
-    async function selectConversation(id) {
-        const conv = conversations.find(c => c.id === id);
-        if (!conv) return;
-        currentConversation = conv;
-        renderConversationList(conversations);
-        const messages = await loadMessages(id);
-        const container = document.getElementById('chatMessages');
-        if (messages.length === 0) {
-            container.innerHTML = '<div class="message bot">✨ Новый диалог. Задайте вопрос по законам SA.</div>';
-        } else {
-            container.innerHTML = messages.map(msg => `
-                <div class="message ${msg.role === 'user' ? 'user' : 'bot'}">${msg.content.replace(/\n/g, '<br>')}</div>
-            `).join('');
-        }
-        const count = messages.length;
-        const input = document.getElementById('questionInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const warningDiv = document.getElementById('limitWarning');
-        if (!conv.isActive) {
-            input.disabled = true;
-            sendBtn.disabled = true;
-            warningDiv.innerHTML = '🔒 Диалог закрыт (достигнут лимит 25 сообщений). Создайте новый диалог.';
-        } else if (count >= 25) {
-            await closeConversation(id);
-            input.disabled = true;
-            sendBtn.disabled = true;
-            warningDiv.innerHTML = '🔒 Диалог автоматически закрыт (25/25 сообщений).';
-        } else if (count >= 15) {
-            input.disabled = false;
-            sendBtn.disabled = false;
-            warningDiv.innerHTML = `⚠️ Осталось ${25 - count} сообщений в этом диалоге. После 25 будет доступен только просмотр.`;
-        } else {
-            input.disabled = false;
-            sendBtn.disabled = false;
-            warningDiv.innerHTML = `💬 Сообщений: ${count}/25`;
-        }
-        await updateStats();
-    }
-
-    async function closeConversation(id) {
-        const tx = db.transaction('conversations', 'readwrite');
-        const store = tx.objectStore('conversations');
-        const conv = await new Promise((resolve) => {
-            const req = store.get(id);
-            req.onsuccess = () => resolve(req.result);
-        });
-        if (conv) {
-            conv.isActive = false;
-            await store.put(conv);
-            if (currentConversation?.id === id) {
-                currentConversation.isActive = false;
+    container.innerHTML = convs.map(conv => `
+        <div class="conv-item ${currentConversation?.id === conv.id ? 'active' : ''}" data-id="${conv.id}">
+            <div class="conv-title">${conv.title}</div>
+            <button class="delete-conv" data-id="${conv.id}">X</button>
+        </div>
+    `).join('');
+    document.querySelectorAll('.conv-item').forEach(el => {
+        el.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('delete-conv')) {
+                selectConversation(parseInt(el.dataset.id));
             }
-        }
-    }
-
-    async function createNewConversation() {
-        if (!currentUser) return;
-        const newConv = {
-            title: `Диалог ${new Date().toLocaleString()}`,
-            createdAt: Date.now(),
-            lastActive: Date.now(),
-            isActive: true,
-            userId: currentUser.id
-        };
-        const saved = await saveConversation(newConv);
-        conversations.unshift(saved);
-        await selectConversation(saved.id);
-        renderConversationList(conversations);
-        await updateStats();
-    }
-
-    function formatBotResponse(text) {
-        let formatted = text;
-        if (!formatted.includes('📌') && !formatted.includes('⚖️')) {
-            formatted = '📌 ' + formatted;
-        }
-        return formatted;
-    }
-
-    async function askAI(userQuestion, conversationHistory) {
-        const messages = [
-            { role: "system", content: `Ты юридический помощник Hyuga AI. Отвечай ТОЛЬКО на основе текста законов штата San Andreas. Если в этом тексте нет точного ответа, скажи: В законах SA не нашёл. Отвечай на русском языке. ТЕКСТ ЗАКОНОВ: ${LAWS_FULL_TEXT}` },
-            ...conversationHistory,
-            { role: "user", content: userQuestion }
-        ];
-        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${API_KEY}` },
-            body: JSON.stringify({ model: MODEL, messages, temperature: 0.3, max_tokens: 800 })
         });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        return formatBotResponse(data.choices[0].message.content);
-    }
-
-    async function sendMessage() {
-        if (!currentUser || !currentConversation || !currentConversation.isActive || waiting) return;
-        const input = document.getElementById('questionInput');
-        const question = input.value.trim();
-        if (!question) return;
-        const msgCount = await getMessageCount(currentConversation.id);
-        if (msgCount >= 25) {
-            await closeConversation(currentConversation.id);
-            document.getElementById('limitWarning').innerHTML = '🔒 Диалог достиг лимита 25 сообщений';
-            return;
-        }
-        function addMessageToUI(text, isUser) {
-            const div = document.createElement('div');
-            div.className = 'message ' + (isUser ? 'user' : 'bot');
-            div.innerHTML = text.replace(/\n/g, '<br>');
-            document.getElementById('chatMessages').appendChild(div);
-            div.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            return div;
-        }
-        addMessageToUI(question, true);
-        await saveMessage(currentConversation.id, 'user', question);
-        input.value = '';
-        waiting = true;
-        const thinkingDiv = addMessageToUI('🤔 Думаю...', false);
-        try {
-            const allMessages = await loadMessages(currentConversation.id);
-            const aiHistory = allMessages.filter(m => m.role !== 'system').map(m => ({ role: m.role, content: m.content }));
-            let reply = await askAI(question, aiHistory);
-            if (!reply) reply = "❓ Сформулируйте вопрос заново.";
-            thinkingDiv.remove();
-            addMessageToUI(reply, false);
-            await saveMessage(currentConversation.id, 'assistant', reply);
-            const newCount = await getMessageCount(currentConversation.id);
-            if (newCount >= 25) {
-                await closeConversation(currentConversation.id);
-                document.getElementById('limitWarning').innerHTML = '🔒 Диалог автоматически закрыт (25/25)';
-                document.getElementById('questionInput').disabled = true;
-                document.getElementById('sendBtn').disabled = true;
-            } else if (newCount >= 15) {
-                document.getElementById('limitWarning').innerHTML = `⚠️ Осталось ${25 - newCount} сообщений`;
-            } else {
-                document.getElementById('limitWarning').innerHTML = `💬 Сообщений: ${newCount}/25`;
+    });
+    document.querySelectorAll('.delete-conv').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (confirm('Удалить диалог?')) {
+                await deleteConversation(parseInt(btn.dataset.id));
             }
-            await updateStats();
-        } catch (err) {
-            thinkingDiv.remove();
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'message bot';
-            errorDiv.innerHTML = `❌ Ошибка: ${err.message}`;
-            document.getElementById('chatMessages').appendChild(errorDiv);
-        } finally {
-            waiting = false;
-        }
-    }
+        });
+    });
+}
 
-    window.onload = async () => {
-        document.getElementById('loginBtn').onclick = loginWithDiscord;
-        document.getElementById('logoutBtn').onclick = logout;
-        document.getElementById('newChatBtn').onclick = () => createNewConversation();
-        document.getElementById('sendBtn').onclick = sendMessage;
-        document.getElementById('questionInput').onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
-        await initDB();
-        checkDiscordAuth();
+async function selectConversation(id) {
+    const conv = conversations.find(c => c.id === id);
+    if (!conv) return;
+    currentConversation = conv;
+    await updateConversationTitle(id);
+    await loadConversationsAndRender();
+    const messages = await loadMessages(id);
+    const container = document.getElementById('chatMessages');
+    if (messages.length === 0) {
+        container.innerHTML = '<div class="message bot">Новый диалог. Задайте вопрос.</div>';
+    } else {
+        container.innerHTML = messages.map(msg => `
+            <div class="message ${msg.role === 'user' ? 'user' : 'bot'}">${msg.content.replace(/\n/g, '<br>')}</div>
+        `).join('');
+    }
+    await updateStats();
+}
+
+async function createNewConversation() {
+    if (!currentUser) return;
+    const daily = await getTodayUserMessagesCount();
+    if (daily >= DAILY_LIMIT) {
+        document.getElementById('limitWarning').innerHTML = 'Лимит 100 сообщений на сегодня';
+        return;
+    }
+    const newConv = await saveConversation({});
+    conversations.unshift(newConv);
+    await selectConversation(newConv.id);
+    renderConversationList(conversations);
+}
+
+function formatBotResponse(text) {
+    return text;
+}
+
+async function askAI(question, history) {
+    const messages = [
+        { role: "system", content: `Ты юрист. Отвечай только на основе законов SA: ${LAWS_FULL_TEXT}. На русском.` },
+        ...history,
+        { role: "user", content: question }
+    ];
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${API_KEY}` },
+        body: JSON.stringify({ model: MODEL, messages, temperature: 0.3, max_tokens: 800 })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data.choices[0].message.content;
+}
+
+async function sendMessage() {
+    if (!currentUser || !currentConversation || waiting) return;
+    const daily = await getTodayUserMessagesCount();
+    if (daily >= DAILY_LIMIT) {
+        document.getElementById('limitWarning').innerHTML = 'Лимит 100 сообщений на сегодня';
+        return;
+    }
+    const input = document.getElementById('questionInput');
+    const question = input.value.trim();
+    if (!question) return;
+    input.value = '';
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'message user';
+    msgDiv.textContent = question;
+    document.getElementById('chatMessages').appendChild(msgDiv);
+    await saveMessage(currentConversation.id, 'user', question);
+    await updateConversationTitle(currentConversation.id);
+    waiting = true;
+    const thinking = document.createElement('div');
+    thinking.className = 'message bot';
+    thinking.textContent = 'Думаю...';
+    document.getElementById('chatMessages').appendChild(thinking);
+    thinking.scrollIntoView({ behavior: 'smooth' });
+    try {
+        const all = await loadMessages(currentConversation.id);
+        const history = all.filter(m => m.role !== 'system').map(m => ({ role: m.role, content: m.content }));
+        const reply = await askAI(question, history.slice(0, -1));
+        thinking.remove();
+        const replyDiv = document.createElement('div');
+        replyDiv.className = 'message bot';
+        replyDiv.textContent = reply;
+        document.getElementById('chatMessages').appendChild(replyDiv);
+        await saveMessage(currentConversation.id, 'assistant', reply);
+        await loadConversationsAndRender();
+        await updateStats();
+    } catch(err) {
+        thinking.textContent = `Ошибка: ${err.message}`;
+    } finally {
+        waiting = false;
+    }
+}
+
+window.onload = async () => {
+    document.getElementById('loginBtn').onclick = loginWithDiscord;
+    document.getElementById('logoutBtn').onclick = logout;
+    document.getElementById('newChatBtn').onclick = createNewConversation;
+    document.getElementById('sendBtn').onclick = sendMessage;
+    document.getElementById('questionInput').onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
+    document.getElementById('menuBtn').onclick = () => {
+        const s = document.getElementById('sidebar');
+        const o = document.getElementById('overlay');
+        s.classList.toggle('closed');
+        o.style.display = s.classList.contains('closed') ? 'none' : 'block';
     };
+    document.getElementById('overlay').onclick = () => {
+        document.getElementById('sidebar').classList.add('closed');
+        document.getElementById('overlay').style.display = 'none';
+    };
+    await initDB();
+    checkDiscordAuth();
+};
 </script>
 </body>
-</html
+</html>
